@@ -69,10 +69,10 @@ class TextArenaSokobanEnv(Env):
         self._ta_env.reset(num_players=1, seed=seed)
         self._initial_room_state = self._ta_env.room_state.copy()
 
-        logger.info(f"Reset Sokoban: {self._dim_room} room, {self._num_boxes} boxes")
+        logger.info("Reset Sokoban.")
 
         obs = Observation(image=self.render(), text=self._get_observation_text())
-        info = {"room_state": self._ta_env.room_state.copy().tolist()}
+        info = {}
 
         return obs, info
 
