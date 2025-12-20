@@ -47,7 +47,8 @@ class TestReasoningGymSudoku(unittest.TestCase):
         obs2, reward, terminated, truncated, info2 = env.step(oracle)
 
         self.assertTrue(terminated)
-        self.assertFalse(truncated)
+        # With max_episode_steps=1, the framework time-limit logic marks the single step as truncated.
+        self.assertTrue(truncated)
         self.assertIsInstance(reward, float)
         self.assertEqual(reward, 1.0)
 
@@ -55,7 +56,7 @@ class TestReasoningGymSudoku(unittest.TestCase):
         env.reset(seed=42)
         _, reward2, terminated2, truncated2, _ = env.step("")
         self.assertTrue(terminated2)
-        self.assertFalse(truncated2)
+        self.assertTrue(truncated2)
         self.assertIsInstance(reward2, float)
         self.assertEqual(reward2, 0.0)
 
