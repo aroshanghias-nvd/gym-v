@@ -93,7 +93,6 @@ class ReasoningGymSudokuEnv(Env):
         )
 
     def _make_dataset(self, *, seed: int | None):
-        import reasoning_gym
         from reasoning_gym.factory import create_dataset
 
         kwargs = dict(self._dataset_kwargs)
@@ -157,9 +156,7 @@ class ReasoningGymSudokuEnv(Env):
             info["oracle_answer"] = self._oracle_answer
 
         obs_text = (
-            f"{self._question}\n\n"
-            f"Your answer:\n{answer}\n\n"
-            f"Score: {reward}"
+            f"{self._question}\n\n" f"Your answer:\n{answer}\n\n" f"Score: {reward}"
         )
         obs = Observation(
             image=self.render(),
@@ -176,7 +173,9 @@ class ReasoningGymSudokuEnv(Env):
         if self._puzzle is None:
             # blank grid if called before reset
             empty = [[0] * 9 for _ in range(9)]
-            return _render_sudoku_grid(empty, cell_px=self._cell_px, padding=self._padding)
-        return _render_sudoku_grid(self._puzzle, cell_px=self._cell_px, padding=self._padding)
-
-
+            return _render_sudoku_grid(
+                empty, cell_px=self._cell_px, padding=self._padding
+            )
+        return _render_sudoku_grid(
+            self._puzzle, cell_px=self._cell_px, padding=self._padding
+        )

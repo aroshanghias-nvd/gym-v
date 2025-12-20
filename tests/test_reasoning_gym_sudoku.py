@@ -14,7 +14,9 @@ except ModuleNotFoundError as e:  # pragma: no cover
 class TestReasoningGymSudoku(unittest.TestCase):
     def test_sudoku_single_turn_env(self):
         # Save reset image for quick manual inspection/debugging.
-        output_dir = Path(__file__).resolve().parent / "test_output_reasoning_gym_sudoku"
+        output_dir = (
+            Path(__file__).resolve().parent / "test_output_reasoning_gym_sudoku"
+        )
         if output_dir.exists():
             # Keep it deterministic/clean across runs
             for p in output_dir.glob("*"):
@@ -60,5 +62,3 @@ class TestReasoningGymSudoku(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
