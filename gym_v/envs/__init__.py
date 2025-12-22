@@ -14,6 +14,51 @@ register(
 )
 
 register(
+    id="ReasoningGym/Maze-v0",
+    entry_point="gym_v.envs.reasongym.maze:ReasoningGymMazeEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        dataset_kwargs=dict(size=500),
+        cell_px=48,
+        padding=24,
+    ),
+)
+
+register(
+    id="ReasoningGym/NQueens-v0",
+    entry_point="gym_v.envs.reasongym.n_queens:ReasoningGymNQueensEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        dataset_kwargs=dict(size=500),
+        cell_px=64,
+        padding=24,
+    ),
+)
+
+register(
+    id="ReasoningGym/GameOfLife-v0",
+    entry_point="gym_v.envs.reasongym.game_of_life:ReasoningGymGameOfLifeEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        dataset_kwargs=dict(size=500),
+        cell_px=32,
+        padding=16,
+    ),
+)
+
+register(
+    id="ReasoningGym/TowerOfHanoi-v0",
+    entry_point="gym_v.envs.reasongym.tower_of_hanoi:ReasoningGymTowerOfHanoiEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        dataset_kwargs=dict(size=500),
+        peg_width=150,
+        peg_height=250,
+        padding=40,
+    ),
+)
+
+register(
     id="TextArena/Crosswords-v0",
     entry_point="gym_v.envs.textarena.crosswords:TextArenaCrosswordsEnv",
     max_episode_steps=100,
