@@ -51,16 +51,42 @@ class ReasoningGymGameOfLifeEnv(Env):
 
     @property
     def description(self) -> str:
-        """Return description with current simulation parameters."""
+        """Return description with current simulation parameters.
+
+        Original reasoning-gym question format:
+        ```
+        What will this Game of Life board look like after {simulation_steps} steps of simulation?
+        Assume a Moore neighborhood and wrapping topology.
+        Reply as array of arrays representing rows in the grid from top to bottom in JSON format.
+        (An empty 3x3 grid would look like this: [[0,0,0],[0,0,0],[0,0,0]])
+
+        [[0,0,0,0,0,0,0,0,0,0],
+         [0,0,0,0,0,1,0,0,0,0],
+         [0,0,0,0,0,0,0,0,0,0],
+         ...
+         [0,0,0,0,0,0,0,0,0,0]].
+        ```
+
+        Original reasoning-gym answer format:
+        ```
+        [[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],...]
+        ```
+        (JSON array of arrays, each inner array is a row, 0=dead, 1=alive)
+        """
         sim_steps = self._metadata.get("simulation_steps", 1) if self._metadata else 1
+        rows = len(self._board) if self._board else 0
+        cols = len(self._board[0]) if self._board and self._board[0] else 0
 
         return dedent(f"""
             What will this Game of Life board look like after {sim_steps} step(s) of simulation?
-
-            Apply Conway's Game of Life rules with Moore neighborhood and wrapping topology.
-
+            Assume a Moore neighborhood and wrapping topology.
             Reply as array of arrays representing rows in the grid from top to bottom in JSON format.
             (An empty 3x3 grid would look like this: [[0,0,0],[0,0,0],[0,0,0]])
+
+            In the image:
+            - Dark/black cells are alive (1)
+            - Light/gray cells are dead (0)
+            - The grid is {rows}x{cols}
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

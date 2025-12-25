@@ -50,18 +50,45 @@ class ReasoningGymMazeEnv(Env):
 
     @property
     def description(self) -> str:
-        """Return description with current maze symbols."""
+        """Return description with current maze visual representation.
+
+        Original reasoning-gym question format:
+        ```
+        Navigate from 'S' (start) to 'G' (goal):
+
+        ```
+        #.#S###
+        #.#...#
+        #.###.#
+        #.....#
+        ###.#.#
+        G...#.#
+        #######
+        ```
+        Legend: '#' = Wall, '.' = Passage
+
+        What is the minimum number of steps to reach the goal?
+        Give only the number of steps as your final answer, no other text or formatting.
+        ```
+        Note: The wall/path/start/goal characters are randomly selected for each puzzle.
+
+        Original reasoning-gym answer format:
+        - A single integer string, e.g. "12", "25", etc.
+        """
         start_char = self._metadata.get("start", "S") if self._metadata else "S"
         goal_char = self._metadata.get("goal", "G") if self._metadata else "G"
-        wall_char = self._metadata.get("wall", "#") if self._metadata else "#"
-        path_char = self._metadata.get("path", ".") if self._metadata else "."
 
         return dedent(f"""
-            Navigate from '{start_char}' (start) to '{goal_char}' (goal) in the maze.
-            Legend: '{wall_char}' = Wall, '{path_char}' = Passage
+            Navigate from the start to the goal in the maze.
+
+            In the image:
+            - Start position: Green cell labeled '{start_char}'
+            - Goal position: Red cell labeled '{goal_char}'
+
+            You can move up, down, left, or right (not diagonally) through passages.
 
             What is the minimum number of steps to reach the goal?
-            Give only the number of steps as your final answer, no other text or formatting.
+            Give only the number of steps as your final answer, no other text or formatting, e.g. "12", "25", etc.
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

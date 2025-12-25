@@ -50,15 +50,62 @@ class ReasoningGymKnightSwapEnv(Env):
 
     @property
     def description(self) -> str:
-        """Return description with current puzzle parameters."""
+        """Return description with current puzzle parameters.
+
+        Original reasoning-gym question format:
+        ```
+        Knight Swap Challenge:
+
+        ```
+            A   B   C   D
+           ----------------
+        3 |   | . |   | . |
+           ----------------
+        2 | B | w |   |   |
+           ----------------
+        1 |   |   | B | w |
+           ----------------
+        ```
+
+        Legend:
+        - 'w' = White Knight
+        - 'B' = Black Knight
+        - Empty squares are marked with '.'
+
+        Objective:
+        Swap the positions of all white knights with all black knights through valid moves.
+
+        Rules:
+        1. Knights move in L-shape (2 squares + 1 square perpendicular)
+        2. Knights can only move to empty squares
+        3. w moves first, then players alternate
+        4. All knights must reach their target positions (white ↔ black)
+
+        Question:
+        Is it possible to swap all knights' positions? If yes, list the moves.
+
+        Answer Format:
+        - For impossible puzzles: "No"
+        - For possible puzzles: List moves as ["color,from,to", ...]
+          Example: ["w,A1,B3"] means white knight moves A1→B3
+        ```
+
+        Original reasoning-gym answer format:
+        - For impossible puzzles: "No"
+        - For possible puzzles: '["w,A1,C2", "B,D1,B2", ...]'
+          (JSON array of move strings)
+        """
         start_turn = self._metadata.get("start_turn", "w") if self._metadata else "w"
+        start_color = "White" if start_turn == "w" else "Black"
         return dedent(f"""
             Knight Swap Challenge:
 
-            Legend:
-            - 'w' = White Knight
-            - 'B' = Black Knight
-            - Empty squares are marked with '.'
+            In the image:
+            - White knights are shown in white/light color
+            - Black knights are shown in black/dark color
+            - Light/green squares are valid positions (knights can move here)
+            - Dark gray squares are invalid positions (knights cannot move here)
+            - Empty valid squares have no knight piece
 
             Objective:
             Swap the positions of all white knights with all black knights through valid moves.
@@ -66,7 +113,7 @@ class ReasoningGymKnightSwapEnv(Env):
             Rules:
             1. Knights move in L-shape (2 squares + 1 square perpendicular)
             2. Knights can only move to empty squares
-            3. {start_turn} moves first, then players alternate
+            3. {start_color} ('{start_turn}') moves first, then players alternate
             4. All knights must reach their target positions (white ↔ black)
 
             Question:
@@ -74,8 +121,9 @@ class ReasoningGymKnightSwapEnv(Env):
 
             Answer Format:
             - For impossible puzzles: "No"
-            - For possible puzzles: List moves as ["color,from,to", ...]
-              Example: ["w,A1,B3"] means white knight moves A1→B3
+            - For possible puzzles: List moves as a JSON array ["color,from,to", ...]
+              where color is 'w' for white or 'B' for black
+              Example: ["w,A1,C2", "B,D1,B2"] means white knight A1→C2, then black knight D1→B2
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):
@@ -183,8 +231,8 @@ class ReasoningGymKnightSwapEnv(Env):
         pieces: dict[str, str | None],
         cell_px: int = 64,
         padding: int = 24,
-        light_sq: tuple[int, int, int] = (240, 217, 181),
-        dark_sq: tuple[int, int, int] = (181, 136, 99),
+        light_sq: tuple[int, int, int] = (238, 238, 210),
+        dark_sq: tuple[int, int, int] = (118, 150, 86),
         white_knight_color: tuple[int, int, int] = (255, 255, 255),
         black_knight_color: tuple[int, int, int] = (30, 30, 30),
     ) -> Image.Image:
@@ -198,63 +246,84 @@ class ReasoningGymKnightSwapEnv(Env):
         n_cols = len(columns)
         n_rows = len(rows)
 
-        width = padding * 2 + cell_px * n_cols
-        height = padding * 2 + cell_px * n_rows
-        img = Image.new("RGB", (width, height), (250, 250, 250))
+        # Extra margin for coordinate labels on left and bottom
+        label_margin = int(cell_px * 0.5)
+        board_width = cell_px * n_cols
+        board_height = cell_px * n_rows
+        width = padding * 2 + label_margin + board_width
+        height = padding * 2 + label_margin + board_height
+
+        bg_color = (48, 46, 43)
+        img = Image.new("RGB", (width, height), bg_color)
         draw = ImageDraw.Draw(img)
 
         font_path = self.assets_dir / "DejaVuSans.ttf"
         if font_path.exists():
-            font = ImageFont.truetype(str(font_path), int(cell_px * 0.5))
-            small_font = ImageFont.truetype(str(font_path), int(cell_px * 0.25))
+            knight_font = ImageFont.truetype(str(font_path), int(cell_px * 0.65))
+            label_font = ImageFont.truetype(str(font_path), int(cell_px * 0.28))
         else:
             logger.warning(f"Font file not found: {font_path}, using default font")
-            font = ImageFont.load_default()
-            small_font = font
+            knight_font = ImageFont.load_default()
+            label_font = knight_font
 
-        # Draw board and pieces
+        # Board origin (top-left of the chess grid)
+        board_x0 = padding + label_margin
+        board_y0 = padding
+
+        # Draw row labels on the left (numbers: 1, 2, 3, ...)
+        for r_idx, row in enumerate(rows):
+            label = str(row)
+            bbox = draw.textbbox((0, 0), label, font=label_font)
+            tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            lx = padding + (label_margin - tw) // 2
+            ly = board_y0 + r_idx * cell_px + (cell_px - th) // 2
+            draw.text((lx, ly), label, fill=(200, 200, 200), font=label_font)
+
+        # Draw column labels at the bottom (letters: A, B, C, ...)
+        for c_idx, col in enumerate(columns):
+            label = col
+            bbox = draw.textbbox((0, 0), label, font=label_font)
+            tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            lx = board_x0 + c_idx * cell_px + (cell_px - tw) // 2
+            ly = board_y0 + board_height + (label_margin - th) // 2
+            draw.text((lx, ly), label, fill=(200, 200, 200), font=label_font)
+
+        # Draw board squares and pieces
         for r_idx, row in enumerate(rows):
             for c_idx, col in enumerate(columns):
                 pos = col + str(row)
-                x = padding + c_idx * cell_px
-                y = padding + r_idx * cell_px
+                x = board_x0 + c_idx * cell_px
+                y = board_y0 + r_idx * cell_px
 
                 # Check if position is valid in the board
                 if pos not in board:
-                    # Draw as invalid/non-existent cell
+                    # Draw as invalid/non-existent cell (grayed out)
                     draw.rectangle(
                         [x, y, x + cell_px - 1, y + cell_px - 1],
-                        fill=(128, 128, 128),
-                        outline=(100, 100, 100),
+                        fill=(80, 80, 80),
+                        outline=(60, 60, 60),
                         width=1,
                     )
                     continue
 
-                # Alternating square colors (chess pattern)
+                # Alternating square colors (chess.com style)
                 sq_color = light_sq if (r_idx + c_idx) % 2 == 0 else dark_sq
                 draw.rectangle(
                     [x, y, x + cell_px - 1, y + cell_px - 1],
                     fill=sq_color,
-                    outline=(100, 100, 100),
-                    width=1,
-                )
-
-                # Draw coordinate label
-                label = pos
-                bbox = draw.textbbox((0, 0), label, font=small_font)
-                _, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-                draw.text(
-                    (x + 2, y + cell_px - th - 2),
-                    label,
-                    fill=(80, 80, 80),
-                    font=small_font,
                 )
 
                 # Draw piece if present
                 piece = pieces.get(pos)
                 if piece == "w":
                     self._draw_knight(
-                        draw, x, y, cell_px, white_knight_color, font, outline=(0, 0, 0)
+                        draw,
+                        x,
+                        y,
+                        cell_px,
+                        white_knight_color,
+                        knight_font,
+                        outline=(0, 0, 0),
                     )
                 elif piece == "B":
                     self._draw_knight(
@@ -263,14 +332,19 @@ class ReasoningGymKnightSwapEnv(Env):
                         y,
                         cell_px,
                         black_knight_color,
-                        font,
-                        outline=(200, 200, 200),
+                        knight_font,
+                        outline=(180, 180, 180),
                     )
 
-        # Draw border
+        # Draw board border
         draw.rectangle(
-            [padding - 2, padding - 2, width - padding + 1, height - padding + 1],
-            outline=(60, 60, 60),
+            [
+                board_x0 - 2,
+                board_y0 - 2,
+                board_x0 + board_width + 1,
+                board_y0 + board_height + 1,
+            ],
+            outline=(80, 80, 80),
             width=2,
         )
 

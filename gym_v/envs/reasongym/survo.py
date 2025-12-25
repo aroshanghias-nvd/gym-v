@@ -52,6 +52,30 @@ class ReasoningGymSurvoEnv(Env):
 
     @property
     def description(self) -> str:
+        """Return description with current puzzle parameters.
+
+        Original reasoning-gym question format (one of several templates):
+        ```
+        Given a {n}*{n} matrix where the last element of each row and column equals
+        the sum of the other elements in that row or column. The matrix is:
+        1 0 3 10
+        0 5 6 17
+        7 8 0 24
+        15 19 17 51
+        where some elements are replaced with 0. You have a set of numbers [2, 4, 9]
+        that can be filled into the 0 positions to satisfy the rules.
+        Please fill in the matrix. Each number can only be used once.
+        ```
+
+        Original reasoning-gym answer format:
+        ```
+        1 2 3 10
+        4 5 6 17
+        7 8 9 24
+        15 19 17 51
+        ```
+        (Numbers separated by spaces, rows separated by newlines)
+        """
         n = self._metadata.get("board_size", 4) if self._metadata else 4
         candidates = self._candidate_numbers if self._candidate_numbers else []
         return dedent(f"""
@@ -60,12 +84,21 @@ class ReasoningGymSurvoEnv(Env):
             Given a {n}x{n} matrix where the last element of each row and column equals
             the sum of the other elements in that row or column.
 
-            Some elements are replaced with 0. You have a set of numbers {candidates}
-            that can be filled into the 0 positions to satisfy the rules.
-            Each number can only be used once.
+            In the image:
+            - Empty cells (to be filled) are marked with "_"
+            - The last row and last column (shown in blue) contain the target sums
+            - Other cells contain fixed numbers
 
-            Please fill in the matrix. Output the completed matrix with spaces
-            separating each number within a row, and newlines separating rows.
+            You have a set of numbers {candidates} that can be filled into the empty
+            positions to satisfy the rules. Each number can only be used once.
+
+            Output format: The completed {n}x{n} matrix with all numbers filled in,
+            spaces separating each number within a row, and newlines separating rows.
+            Example for a 4x4 matrix:
+            1 2 3 6
+            4 5 6 15
+            7 8 9 24
+            12 15 18 45
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

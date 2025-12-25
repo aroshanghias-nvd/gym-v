@@ -50,17 +50,46 @@ class ReasoningGymTsumegoEnv(Env):
 
     @property
     def description(self) -> str:
-        return dedent("""
+        """Return description with current puzzle parameters.
+
+        Original reasoning-gym question format:
+        ```
+        Black to play and capture some stones. Find the key move.
+
+           A B C D E F G H I
+         9 . . . . . . . . .
+         8 . . . . . . . . .
+         7 . . X X X . . . .
+         6 . . X O O X . . .
+         5 . . X O . O X . .
+         4 . . . X O O X . .
+         3 . . . . X X X . .
+         2 . . . . . . . . .
+         1 . . . . . . . . .
+
+        X - Black
+        O - White
+
+        Specify your move in coordinates (e.g. 'C4' for column C, row 4)
+        ```
+
+        Original reasoning-gym answer format:
+        - A coordinate string like "E5", "C4", etc.
+        """
+        board_size = len(self._board) if self._board else 9
+        return dedent(f"""
             Tsumego (Go Problem):
 
-            Black to play and capture some stones.
-            Find the key move.
+            Black to play and capture some stones. Find the key move.
 
-            X - Black
-            O - White
-            . - Empty
+            In the image:
+            - Black stones are shown as black circles
+            - White stones are shown as light/white circles
+            - Empty intersections show just the board grid lines
+            - The board is labeled with columns A-{chr(ord('A') + board_size - 1)} and rows 1-{board_size}
 
-            Specify your move in coordinates (e.g. 'C4' for column C, row 4)
+            Specify your move in coordinates (e.g. 'C4' for column C, row 4).
+            Output only the coordinate, nothing else, like "E5", "C4", etc.
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

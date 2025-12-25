@@ -50,14 +50,50 @@ class ReasoningGymMiniSudokuEnv(Env):
 
     @property
     def description(self) -> str:
-        return dedent("""
-            In 4x4 Mini Sudoku:
-            - Each row must contain each number from 1-4 exactly once
-            - Each column must contain each number 1-4 exactly once
-            - Each 2x2 subgrid must contain each number 1-4 exactly once
+        """Return description for Mini Sudoku puzzle.
 
+        Original reasoning-gym question format:
+        ```
+        In 4x4 Mini Sudoku:
+        - Each row must contain each number from 1-4 exactly once
+        - Each column must contain each number 1-4 exactly once
+        - Each 2x2 subgrid must contain each number 1-4 exactly once
+        Solve this 4x4 Mini Sudoku puzzle:
+        _ 2 3 4
+        3 _ 1 2
+        2 1 4 _
+        4 3 _ 1
+        Format your response as the puzzle above, with spaces separating each number
+        within a row, and newlines separating rows.
+        ```
+
+        Original reasoning-gym answer format:
+        ```
+        1 2 3 4
+        3 4 1 2
+        2 1 4 3
+        4 3 2 1
+        ```
+        (4x4 grid, numbers 1-4 separated by spaces, rows separated by newlines)
+        """
+        return dedent("""
             Solve this 4x4 Mini Sudoku puzzle.
-            Format your response as the puzzle, with spaces separating each number within a row, and newlines separating rows.
+
+            In the image:
+            - Cells with numbers are pre-filled clues
+            - Empty cells need to be filled with digits 1-4
+
+            Rules:
+            - Each row must contain digits 1-4 exactly once
+            - Each column must contain digits 1-4 exactly once
+            - Each 2x2 subgrid must contain digits 1-4 exactly once
+
+            Output format: A 4x4 grid with numbers separated by spaces within rows,
+            and newlines separating rows. Example:
+            1 2 3 4
+            3 4 1 2
+            2 1 4 3
+            4 3 2 1
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

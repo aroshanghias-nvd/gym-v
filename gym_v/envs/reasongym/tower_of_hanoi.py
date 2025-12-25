@@ -66,7 +66,36 @@ class ReasoningGymTowerOfHanoiEnv(Env):
 
     @property
     def description(self) -> str:
-        """Return description with current puzzle parameters."""
+        """Return description with current puzzle parameters.
+
+        Original reasoning-gym question format:
+        ```
+        Solve the Tower of Hanoi problem with {num_disks} disks and {num_pegs} pegs.
+        Move all disks from Peg {start_peg} to Peg {target_peg} following the rules:
+        - Only one disk can be moved at a time.
+        - A larger disk cannot be placed on top of a smaller disk.
+        - All disks must be on a peg at all times.
+
+        Provide the sequence of moves.
+
+        Formatting guidelines:
+        - Each instruction should be placed on a single line.
+        - Each line should be formatted as 'Move disk X from Peg Y to Peg Z'
+        - Do not include any other text or formatting.
+        ```
+
+        Original reasoning-gym answer format:
+        ```
+        Move disk 1 from Peg 1 to Peg 3
+        Move disk 2 from Peg 1 to Peg 2
+        Move disk 1 from Peg 3 to Peg 2
+        Move disk 3 from Peg 1 to Peg 3
+        Move disk 1 from Peg 2 to Peg 1
+        Move disk 2 from Peg 2 to Peg 3
+        Move disk 1 from Peg 1 to Peg 3
+        ```
+        (Each move on a new line, format: "Move disk X from Peg Y to Peg Z")
+        """
         num_disks = self._metadata.get("num_disks", 3) if self._metadata else 3
         num_pegs = self._metadata.get("num_pegs", 3) if self._metadata else 3
         start_peg = self._metadata.get("start_peg", 1) if self._metadata else 1
@@ -74,17 +103,25 @@ class ReasoningGymTowerOfHanoiEnv(Env):
 
         return dedent(f"""
             Solve the Tower of Hanoi problem with {num_disks} disks and {num_pegs} pegs.
-            Move all disks from Peg {start_peg} to Peg {target_peg} following the rules:
-            - Only one disk can be moved at a time.
-            - A larger disk cannot be placed on top of a smaller disk.
-            - All disks must be on a peg at all times.
 
-            Provide the sequence of moves.
+            In the image:
+            - Disks are shown as colored rectangles with numbers
+            - All disks start on Peg {start_peg}
+            - Each peg is labeled at the bottom
 
-            Formatting guidelines:
-            - Each instruction should be placed on a single line.
-            - Each line should be formatted as 'Move disk X from Peg Y to Peg Z'
-            - Do not include any other text or formatting.
+            Goal: Move all disks from Peg {start_peg} to Peg {target_peg}.
+
+            Rules:
+            - Only one disk can be moved at a time
+            - A larger disk cannot be placed on top of a smaller disk
+            - All disks must be on a peg at all times
+
+            Output format: Each move on a single line as:
+            Move disk X from Peg Y to Peg Z
+
+            Example:
+            Move disk 1 from Peg 1 to Peg 3
+            Move disk 2 from Peg 1 to Peg 2
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

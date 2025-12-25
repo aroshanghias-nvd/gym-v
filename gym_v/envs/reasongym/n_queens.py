@@ -50,19 +50,57 @@ class ReasoningGymNQueensEnv(Env):
 
     @property
     def description(self) -> str:
-        """Return description with current puzzle parameters."""
+        """Return description with current puzzle parameters.
+
+        Original reasoning-gym question format:
+        ```
+        Your job is to complete an n x n chess board with n Queens in total, such that no two attack each other.
+
+        No two queens attack each other if they are not in the same row, column, or diagonal.
+
+        You can place a queen by replacing an underscore (_) with a Q.
+
+        Your output should be also a board in the same format as the input, with queens placed on the board by replacing underscores with the letter Q.
+
+        Given the below board of size {n} x {n} your job is to place {num_removed} queen(s) on the board such that no two queens attack each other.
+        _ Q _ _ _ _ _ _
+        _ _ _ _ Q _ _ _
+        ...
+        ```
+
+        Original reasoning-gym answer format:
+        ```
+        _ Q _ _ _ _ _ _
+        _ _ _ _ Q _ _ _
+        _ _ _ _ _ _ Q _
+        Q _ _ _ _ _ _ _
+        _ _ Q _ _ _ _ _
+        _ _ _ _ _ _ _ Q
+        _ _ _ _ _ Q _ _
+        _ _ _ Q _ _ _ _
+        ```
+        (Board with Q for queens, _ for empty, spaces between cells, newlines between rows)
+        """
         n = len(self._puzzle) if self._puzzle else 8
         num_removed = self._metadata.get("num_removed", 0) if self._metadata else 0
 
         return dedent(f"""
-            Complete the {n} x {n} chess board with {n} Queens in total, such that no two attack each other.
+            Your job is to complete an {n} x {n} chess board with {n} Queens in total, ssuch that no two attack each other.
+
+            In the image:
+            - Queens are shown as ♛ symbols
+            - Empty squares (where you can place queens) are blank
 
             No two queens attack each other if they are not in the same row, column, or diagonal.
+            Your job is to place {num_removed} more queen(s) on the board such that no two queens attack each other.
 
-            You can place a queen by replacing an underscore (_) with a Q.
-            Your job is to place {num_removed} queen(s) on the board such that no two queens attack each other.
-
-            Your output should be a board in the same format as the input, with queens placed by replacing underscores with the letter Q.
+            Output format: A {n}x{n} board where each cell is either Q (queen) or _ (empty),
+            with spaces separating cells in a row, and newlines separating rows.
+            Example for a 4x4 board:
+            _ Q _ _
+            _ _ _ Q
+            Q _ _ _
+            _ _ Q _
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

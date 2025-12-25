@@ -50,9 +50,52 @@ class ReasoningGymSudokuEnv(Env):
 
     @property
     def description(self) -> str:
+        """Return description for Sudoku puzzle.
+
+        Original reasoning-gym question format:
+        ```
+        Solve this Sudoku puzzle:
+        _ 2 3 4 5 6 7 8 9
+        4 5 6 7 8 9 1 2 _
+        7 8 9 1 2 3 4 5 6
+        ...
+        Respond with only your answer, formatted as the puzzle, a 9x9 grid with
+        numbers separated by spaces, and rows separated by newlines.
+        ```
+
+        Original reasoning-gym answer format:
+        ```
+        1 2 3 4 5 6 7 8 9
+        4 5 6 7 8 9 1 2 3
+        7 8 9 1 2 3 4 5 6
+        2 3 4 5 6 7 8 9 1
+        5 6 7 8 9 1 2 3 4
+        8 9 1 2 3 4 5 6 7
+        3 4 5 6 7 8 9 1 2
+        6 7 8 9 1 2 3 4 5
+        9 1 2 3 4 5 6 7 8
+        ```
+        (9x9 grid, numbers 1-9 separated by spaces, rows separated by newlines)
+        """
         return dedent("""
-            Solve this Sudoku puzzle.
-            Respond with only your answer, formatted as the puzzle, a 9x9 grid with numbers separated by spaces, and rows separated by newlines.
+            Solve this 9x9 Sudoku puzzle.
+
+            In the image:
+            - Cells with numbers are pre-filled clues
+            - Empty cells need to be filled with digits 1-9
+
+            Output format: A 9x9 grid with numbers separated by spaces within rows,
+            and newlines separating rows. Example:
+            1 2 3 4 5 6 7 8 9
+            4 5 6 7 8 9 1 2 3
+            7 8 9 1 2 3 4 5 6
+            2 3 4 5 6 7 8 9 1
+            5 6 7 8 9 1 2 3 4
+            8 9 1 2 3 4 5 6 7
+            3 4 5 6 7 8 9 1 2
+            6 7 8 9 1 2 3 4 5
+            9 1 2 3 4 5 6 7 8
+            ...
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

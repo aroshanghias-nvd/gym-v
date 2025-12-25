@@ -52,6 +52,37 @@ class ReasoningGymKakurasuEnv(Env):
 
     @property
     def description(self) -> str:
+        """Return description for Kakurasu puzzle.
+
+        Original reasoning-gym question format (one of several templates):
+        ```
+        You are given a {n_rows} x {n_cols} grid representing a Kukurasu puzzle.
+        In this puzzle, you need to place 1s in the grid so that the weighted sum
+        of each row and column matches the given constraints.
+        The row sums are [3, 5, 7, 4] and the column sums are [6, 4, 5, 4].
+
+        1. Rules:
+          1. Each cell can contain either a 1 or an 0.
+          2. The weight of a 1 in a row is its column position (1 to {n_cols}).
+          3. The weight of a 1 in a column is its row position (1 to {n_rows}).
+          4. The weighted sum of each row must match the corresponding row constraint.
+          5. The weighted sum of each column must match the corresponding column constraint.
+        2. Input:
+        0 0 0 0
+        0 0 0 0
+        0 0 0 0
+        0 0 0 0
+        ```
+
+        Original reasoning-gym answer format:
+        ```
+        1 0 1 0
+        0 1 0 1
+        1 1 0 0
+        0 0 1 1
+        ```
+        (Grid with 0s and 1s, spaces between cells, newlines between rows)
+        """
         n_rows = self._metadata.get("n_rows", 4) if self._metadata else 4
         n_cols = self._metadata.get("n_cols", 4) if self._metadata else 4
         row_sums = self._row_sums if self._row_sums else []
@@ -60,21 +91,26 @@ class ReasoningGymKakurasuEnv(Env):
         return dedent(f"""
             Kakurasu (Kukurasu) Puzzle:
 
-            You are given a {n_rows} x {n_cols} grid. Place 1s in the grid so that
-            the weighted sum of each row and column matches the given constraints.
+            In the image:
+            - The {n_rows}x{n_cols} main grid shows cells marked with "?" (to be filled)
+            - Top row (blue): Column weights 1, 2, 3, ... from left to right
+            - Left column (blue): Row weights 1, 2, 3, ... from top to bottom
+            - Right column (orange): Target sum for each row = {row_sums}
+            - Bottom row (orange): Target sum for each column = {col_sums}
 
             Rules:
-            1. Each cell can contain either a 1 or a 0.
+            1. Each cell can contain either a 1 or an 0.
             2. The weight of a 1 in a row is its column position (1 to {n_cols}).
             3. The weight of a 1 in a column is its row position (1 to {n_rows}).
             4. The weighted sum of each row must match the corresponding row constraint.
             5. The weighted sum of each column must match the corresponding column constraint.
 
-            Row sums (left to right): {row_sums}
-            Column sums (top to bottom): {col_sums}
-
-            Output the completed grid with spaces separating each number within a row,
-            and newlines separating rows.
+            Output format: A {n_rows}x{n_cols} grid with 0s and 1s,
+            spaces separating numbers in a row, newlines separating rows.
+            Example for a 3x3 grid:
+            1 0 1
+            0 1 0
+            1 1 0
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):
