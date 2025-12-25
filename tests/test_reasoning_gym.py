@@ -1,6 +1,7 @@
 """Unified tests for all ReasoningGym environments."""
 
 from pathlib import Path
+import random
 import unittest
 
 try:
@@ -26,6 +27,15 @@ REASONING_GYM_ENVS = {
     "ReasoningGym/Survo-v0": "survo",
     "ReasoningGym/TowerOfHanoi-v0": "tower_of_hanoi",
     "ReasoningGym/Tsumego-v0": "tsumego",
+    "ReasoningGym/SpiralMatrix-v0": "spiral_matrix",
+    "ReasoningGym/RotateMatrix-v0": "rotate_matrix",
+    "ReasoningGym/BinaryMatrix-v0": "binary_matrix",
+    "ReasoningGym/LargestIsland-v0": "largest_island",
+    "ReasoningGym/RottenOranges-v0": "rotten_oranges",
+    "ReasoningGym/ShortestPath-v0": "shortest_path",
+    "ReasoningGym/RectangleCount-v0": "rectangle_count",
+    "ReasoningGym/CircuitLogic-v0": "circuit_logic",
+    "ReasoningGym/Arc1D-v0": "arc_1d",
 }
 
 
@@ -58,8 +68,12 @@ class TestReasoningGym(unittest.TestCase):
         output_dir = self._get_output_dir(env_id)
         self._setup_output_dir(output_dir)
 
+        # Use random seed for each test
+        test_seed = random.randint(0, 9999)
+        print(f"\n[{env_id}] Using random seed: {test_seed}")
+
         env = gym_v.make(env_id)
-        obs, info = env.reset(seed=42)
+        obs, info = env.reset(seed=test_seed)
 
         # 1. Save image
         self.assertIsNotNone(obs.image)
@@ -71,6 +85,7 @@ class TestReasoningGym(unittest.TestCase):
         self.assertGreater(len(oracle), 0)
 
         print("\n" + "=" * 80)
+        print(f"[{env_id}] SEED: {test_seed}")
         print(f"[{env_id}] DESCRIPTION:\n")
         print(env.description[:500] if len(env.description) > 500 else env.description)
         print(f"\n[{env_id}] OBS.TEXT:\n")
@@ -90,7 +105,7 @@ class TestReasoningGym(unittest.TestCase):
         )
 
         # 4. Verify reward with wrong answer
-        env.reset(seed=42)
+        env.reset(seed=test_seed)
         _, reward2, terminated2, truncated2, _ = env.step("")
         self.assertTrue(terminated2)
         self.assertTrue(truncated2)
@@ -101,7 +116,7 @@ class TestReasoningGym(unittest.TestCase):
 
         # 5. Verify Q&A matches original reasoning-gym
         entry_idx = info["reasoning_gym_index"]
-        original_dataset = create_dataset(dataset_name, seed=42, size=500)
+        original_dataset = create_dataset(dataset_name, seed=test_seed, size=500)
         original_entry = original_dataset[entry_idx]
 
         # Answer must match exactly
@@ -121,7 +136,7 @@ class TestReasoningGym(unittest.TestCase):
                 )
 
         print(
-            f"✅ {env_id}: Q&A verified to match original reasoning-gym (entry {entry_idx})"
+            f"✅ {env_id}: Q&A verified to match original reasoning-gym (seed={test_seed}, entry={entry_idx})"
         )
 
 

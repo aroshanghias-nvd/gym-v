@@ -231,10 +231,6 @@ class ReasoningGymKnightSwapEnv(Env):
         pieces: dict[str, str | None],
         cell_px: int = 64,
         padding: int = 24,
-        light_sq: tuple[int, int, int] = (238, 238, 210),
-        dark_sq: tuple[int, int, int] = (118, 150, 86),
-        white_knight_color: tuple[int, int, int] = (255, 255, 255),
-        black_knight_color: tuple[int, int, int] = (30, 30, 30),
     ) -> Image.Image:
         if not board:
             return Image.new("RGB", (200, 200), (250, 250, 250))
@@ -246,97 +242,101 @@ class ReasoningGymKnightSwapEnv(Env):
         n_cols = len(columns)
         n_rows = len(rows)
 
-        # Extra margin for coordinate labels on left and bottom
-        label_margin = int(cell_px * 0.5)
+        # Calculate dimensions
+        label_margin = 35
         board_width = cell_px * n_cols
         board_height = cell_px * n_rows
         width = padding * 2 + label_margin + board_width
         height = padding * 2 + label_margin + board_height
 
-        bg_color = (48, 46, 43)
+        bg_color = (245, 245, 250)
         img = Image.new("RGB", (width, height), bg_color)
         draw = ImageDraw.Draw(img)
 
         font_path = self.assets_dir / "DejaVuSans.ttf"
         if font_path.exists():
-            knight_font = ImageFont.truetype(str(font_path), int(cell_px * 0.65))
-            label_font = ImageFont.truetype(str(font_path), int(cell_px * 0.28))
+            knight_font = ImageFont.truetype(str(font_path), int(cell_px * 0.6))
+            label_font = ImageFont.truetype(str(font_path), 16)
         else:
             logger.warning(f"Font file not found: {font_path}, using default font")
             knight_font = ImageFont.load_default()
             label_font = knight_font
 
-        # Board origin (top-left of the chess grid)
         board_x0 = padding + label_margin
         board_y0 = padding
 
-        # Draw row labels on the left (numbers: 1, 2, 3, ...)
+        # Draw labels
         for r_idx, row in enumerate(rows):
-            label = str(row)
-            bbox = draw.textbbox((0, 0), label, font=label_font)
+            bbox = draw.textbbox((0, 0), str(row), font=label_font)
             tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-            lx = padding + (label_margin - tw) // 2
-            ly = board_y0 + r_idx * cell_px + (cell_px - th) // 2
-            draw.text((lx, ly), label, fill=(200, 200, 200), font=label_font)
+            draw.text(
+                (
+                    padding + (label_margin - tw) // 2,
+                    board_y0 + r_idx * cell_px + (cell_px - th) // 2,
+                ),
+                str(row),
+                fill=(100, 100, 100),
+                font=label_font,
+            )
 
-        # Draw column labels at the bottom (letters: A, B, C, ...)
         for c_idx, col in enumerate(columns):
-            label = col
-            bbox = draw.textbbox((0, 0), label, font=label_font)
+            bbox = draw.textbbox((0, 0), col, font=label_font)
             tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-            lx = board_x0 + c_idx * cell_px + (cell_px - tw) // 2
-            ly = board_y0 + board_height + (label_margin - th) // 2
-            draw.text((lx, ly), label, fill=(200, 200, 200), font=label_font)
+            draw.text(
+                (
+                    board_x0 + c_idx * cell_px + (cell_px - tw) // 2,
+                    board_y0 + board_height + 10,
+                ),
+                col,
+                fill=(100, 100, 100),
+                font=label_font,
+            )
 
-        # Draw board squares and pieces
+        # Draw board squares
+        square_color = (220, 230, 240)
+        invalid_color = (180, 180, 180)
+
         for r_idx, row in enumerate(rows):
             for c_idx, col in enumerate(columns):
                 pos = col + str(row)
                 x = board_x0 + c_idx * cell_px
                 y = board_y0 + r_idx * cell_px
 
-                # Check if position is valid in the board
                 if pos not in board:
-                    # Draw as invalid/non-existent cell (grayed out)
+                    # Invalid square
                     draw.rectangle(
                         [x, y, x + cell_px - 1, y + cell_px - 1],
-                        fill=(80, 80, 80),
-                        outline=(60, 60, 60),
+                        fill=invalid_color,
+                        outline=(150, 150, 150),
                         width=1,
                     )
-                    continue
-
-                # Alternating square colors (chess.com style)
-                sq_color = light_sq if (r_idx + c_idx) % 2 == 0 else dark_sq
-                draw.rectangle(
-                    [x, y, x + cell_px - 1, y + cell_px - 1],
-                    fill=sq_color,
-                )
-
-                # Draw piece if present
-                piece = pieces.get(pos)
-                if piece == "w":
-                    self._draw_knight(
-                        draw,
-                        x,
-                        y,
-                        cell_px,
-                        white_knight_color,
-                        knight_font,
-                        outline=(0, 0, 0),
-                    )
-                elif piece == "B":
-                    self._draw_knight(
-                        draw,
-                        x,
-                        y,
-                        cell_px,
-                        black_knight_color,
-                        knight_font,
+                else:
+                    # Valid square
+                    draw.rectangle(
+                        [x, y, x + cell_px - 1, y + cell_px - 1],
+                        fill=square_color,
                         outline=(180, 180, 180),
+                        width=1,
                     )
 
-        # Draw board border
+                    # Draw piece
+                    piece = pieces.get(pos)
+                    if piece == "w":
+                        self._draw_knight(
+                            draw, x, y, cell_px, (255, 255, 255), knight_font, (0, 0, 0)
+                        )
+                    elif piece == "B":
+                        self._draw_knight(
+                            draw,
+                            x,
+                            y,
+                            cell_px,
+                            (40, 40, 40),
+                            knight_font,
+                            (200, 200, 200),
+                        )
+
+        # Draw border
         draw.rectangle(
             [
                 board_x0 - 2,
@@ -344,7 +344,7 @@ class ReasoningGymKnightSwapEnv(Env):
                 board_x0 + board_width + 1,
                 board_y0 + board_height + 1,
             ],
-            outline=(80, 80, 80),
+            outline=(100, 100, 100),
             width=2,
         )
 
