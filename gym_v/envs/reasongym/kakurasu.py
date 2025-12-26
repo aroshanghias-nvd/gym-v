@@ -85,8 +85,6 @@ class ReasoningGymKakurasuEnv(Env):
         """
         n_rows = self._metadata.get("n_rows", 4) if self._metadata else 4
         n_cols = self._metadata.get("n_cols", 4) if self._metadata else 4
-        row_sums = self._row_sums if self._row_sums else []
-        col_sums = self._col_sums if self._col_sums else []
 
         return dedent(f"""
             Kakurasu (Kukurasu) Puzzle:
@@ -95,8 +93,8 @@ class ReasoningGymKakurasuEnv(Env):
             - The {n_rows}x{n_cols} main grid shows cells marked with "?" (to be filled)
             - Top row (blue): Column weights 1, 2, 3, ... from left to right
             - Left column (blue): Row weights 1, 2, 3, ... from top to bottom
-            - Right column (orange): Target sum for each row = {row_sums}
-            - Bottom row (orange): Target sum for each column = {col_sums}
+            - Right column (orange): Target sum for each row
+            - Bottom row (orange): Target sum for each column
 
             Rules:
             1. Each cell can contain either a 1 or an 0.

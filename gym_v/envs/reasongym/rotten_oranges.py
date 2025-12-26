@@ -74,23 +74,18 @@ class ReasoningGymRottenOrangesEnv(Env):
         ```
         (Single integer: minutes or -1 if impossible)
         """
-        rows = len(self._grid) if self._grid else 0
-        cols = len(self._grid[0]) if self._grid and self._grid[0] else 0
-
-        return dedent(f"""
+        return dedent("""
             Determine the minimum minutes until no fresh orange remains.
 
-            In the image:
-            - A {rows}x{cols} grid
-            - Small gray dots = empty cells (0)
-            - Bright orange fruits with leaf = fresh oranges (1)
-            - Brownish fruits with dark spots = rotten oranges (2)
+            Every minute, any fresh orange that is 4-directionally adjacent to a rotten
+            orange becomes rotten.
 
-            Every minute, fresh oranges adjacent (4-directionally) to rotten ones become rotten.
+            Your task is determine the minimum number of minutes that must elapse until
+            no cell has a fresh orange. If this is impossible, return -1.
 
-            Return the minimum minutes. If impossible (some fresh oranges can't be reached), return -1.
+            Now, determine the minimum number of minutes. If impossible (some fresh oranges can't be reached), return -1.
 
-            Output format: A single integer.
+            Output format: Only a single integer.
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

@@ -86,24 +86,13 @@ class ReasoningGymShortestPathEnv(Env):
         ```
         (Space-separated directions, or "infeasible")
         """
-        rows = len(self._matrix) if self._matrix else 0
-        cols = len(self._matrix[0]) if self._matrix and self._matrix[0] else 0
-
-        return dedent(f"""
+        return dedent("""
             Find the shortest path from START to GOAL in the maze.
-
-            In the image (Pathfinding Maze - {rows}x{cols} grid):
-            - Title: "Pathfinding Challenge"
-            - Green circular marker with 'START' = Starting point (*)
-            - Red flag marker with 'GOAL' = Destination point (#)
-            - Light blue tiles = Open paths (walkable)
-            - Dark walls with texture = Blocked cells (walls)
-            - Legend at bottom explains all symbols
 
             Rules:
             - Move only in 4 directions: up, down, left, right
-            - Walk only through open paths (light blue)
-            - Cannot pass through walls (dark blocks)
+            - Walk only through open paths
+            - Cannot pass through walls
 
             If no path exists, answer "infeasible".
 

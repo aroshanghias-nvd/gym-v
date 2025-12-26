@@ -72,15 +72,10 @@ class ReasoningGymRotateMatrixEnv(Env):
         ```
         (Matrix with space-separated numbers, newlines between rows)
         """
-        n = self._metadata.get("n", 0) if self._metadata else 0
         degrees = self._num_rotations * 90
 
         return dedent(f"""
-            Rotate the matrix clockwise by {degrees} degrees.
-
-            In the image:
-            - A {n}x{n} matrix with numbers in each cell
-            - Rotate the entire matrix clockwise
+            Given a square matrix, your job is to rotate it clockwise by {degrees} degrees.
 
             Output format: Matrix with space-separated numbers, newlines between rows.
             Example for a 2x2 result:

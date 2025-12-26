@@ -101,9 +101,9 @@ class ReasoningGymKnightSwapEnv(Env):
             Knight Swap Challenge:
 
             In the image:
-            - White knights are shown in white/light color
-            - Black knights are shown in black/dark color
-            - Light/green squares are valid positions (knights can move here)
+            - White knights are shown in white color
+            - Black knights are shown in black color
+            - Light squares are valid positions (knights can move here)
             - Dark gray squares are invalid positions (knights cannot move here)
             - Empty valid squares have no knight piece
 

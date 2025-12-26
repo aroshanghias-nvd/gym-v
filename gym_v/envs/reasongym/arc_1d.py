@@ -102,7 +102,6 @@ class ReasoningGymArc1DEnv(Env):
             Find the rule that maps input to output, then apply it to the test input.
 
             In the image (ARC 1D - Pattern Recognition):
-            - Title: "ARC 1D - Pattern Recognition"
             - {num_examples} training examples (Example 1, 2, 3) showing INPUT → OUTPUT
             - Each example has colored cells representing numbers (0-9)
             - TEST input at bottom (red label) with "?" for unknown output

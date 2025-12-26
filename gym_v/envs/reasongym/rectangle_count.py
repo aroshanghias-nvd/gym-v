@@ -72,16 +72,9 @@ class ReasoningGymRectangleCountEnv(Env):
         (Single integer count)
         """
         return dedent("""
-            Count how many rectangles are present in the grid.
-
-            In the image:
-            - Blue lines ('#') outline single rectangles
-            - Dark/filled areas ('█') show overlapping rectangles (max 2)
-            - White/empty areas are background
-
-            Your task: Count the total number of rectangles.
-
-            Output format: A single integer.
+            How many rectangles do you see in the grid below?
+            Your output should be only a single number, representing the total count
+        of rectangles.
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

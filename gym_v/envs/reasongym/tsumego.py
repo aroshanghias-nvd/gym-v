@@ -76,17 +76,15 @@ class ReasoningGymTsumegoEnv(Env):
         Original reasoning-gym answer format:
         - A coordinate string like "E5", "C4", etc.
         """
-        board_size = len(self._board) if self._board else 9
-        return dedent(f"""
+        return dedent("""
             Tsumego (Go Problem):
 
             Black to play and capture some stones. Find the key move.
 
             In the image:
             - Black stones are shown as black circles
-            - White stones are shown as light/white circles
+            - White stones are shown as white circles
             - Empty intersections show just the board grid lines
-            - The board is labeled with columns A-{chr(ord('A') + board_size - 1)} and rows 1-{board_size}
 
             Specify your move in coordinates (e.g. 'C4' for column C, row 4).
             Output only the coordinate, nothing else, like "E5", "C4", etc.

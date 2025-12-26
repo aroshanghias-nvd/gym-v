@@ -82,28 +82,10 @@ class ReasoningGymCircuitLogicEnv(Env):
         ```
         (Single bit: 0 or 1)
         """
-        assignments_str = ""
-        if self._assignments:
-            assignments_str = ", ".join(
-                f"{k}={v}" for k, v in sorted(self._assignments.items())
-            )
-
-        return dedent(f"""
-            Evaluate the logic circuit and determine the output.
-
-            In the image (PCB-style circuit board):
-            - Green PCB background with copper traces
-            - Input wires labeled with letters (A, B, C, ...) with LED indicators
-            - Green LED = 1 (HIGH), Red LED = 0 (LOW)
-            - Gates shown in yellow: && (AND), ++ (OR), ⊕⊕ (XOR), ↑↑ (NAND)
-            - NOT gates shown in red: >o
-            - Output wire labeled OUT in green
-
-            Input assignments: {assignments_str}
-
-            Trace the signals through the gates to find the final output.
-
-            Output format: A single bit (0 or 1).
+        return dedent("""
+            The image (PCB-style circuit board) is a randomly generated logic circuit.
+            What is the output of the circuit?
+            Output format: 0 or 1.
         """).strip()
 
     def _make_dataset(self, *, seed: int | None):

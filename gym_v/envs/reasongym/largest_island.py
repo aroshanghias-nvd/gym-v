@@ -73,18 +73,11 @@ class ReasoningGymLargestIslandEnv(Env):
         ```
         (Single integer representing the maximum island area)
         """
-        rows = len(self._grid) if self._grid else 0
-        cols = len(self._grid[0]) if self._grid and self._grid[0] else 0
-
-        return dedent(f"""
+        return dedent("""
             Find the maximum area of an island in the grid.
 
-            In the image ({rows}×{cols} grid):
-            - Blue cells = Water (0)
-            - Green cells = Land (1)
-
-            An island is a group of 1's (land) connected 4-directionally (up, down, left, right).
-            The area of an island is the count of 1-cells in that island.
+            An island is a group of land connected 4-directionally (up, down, left, right).You may assume all four edges of the grid are surrounded by water
+            The area of an island is the count of land in that island.
 
             Return the maximum area. If there is no island, return 0.
 

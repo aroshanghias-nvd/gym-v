@@ -77,9 +77,7 @@ class ReasoningGymSpiralMatrixEnv(Env):
         ```
         (Space-separated integers in spiral order)
         """
-        n = self._metadata.get("n", 0) if self._metadata else 0
-
-        return dedent(f"""
+        return dedent("""
             Generate a list of elements in spiral order, starting from the top-left element.
 
             The spiral order is clockwise:
@@ -89,10 +87,7 @@ class ReasoningGymSpiralMatrixEnv(Env):
             - Move up towards the top-left corner.
             - Repeat for inner elements until every entry is visited.
 
-            In the image:
-            - A {n}x{n} matrix with numbers in each cell
-            - Read elements following the spiral path
-
+            For the matrix image, what is the list of elements in spiral order?
             Output format: Space-separated list of integers, e.g. 1 2 3 4 5 6
         """).strip()
 

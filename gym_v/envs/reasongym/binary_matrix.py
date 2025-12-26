@@ -75,16 +75,14 @@ class ReasoningGymBinaryMatrixEnv(Env):
         ```
         (Matrix with space-separated distances, newlines between rows)
         """
-        n = self._metadata.get("n", 0) if self._metadata else 0
+        return dedent("""
+            Given a square matrix, your job is to find the taxicab (Manhattan) distance
+            of the nearest 0 for each cell.
 
-        return dedent(f"""
-            Find the Manhattan distance to the nearest 0 for each cell.
+            The output should be a matrix of the same size as the input matrix,
+            where each cell contains the distance to the nearest 0.
 
-            In the image:
-            - A {n}x{n} binary matrix (0s and 1s)
-            - Dark cells = 1, Light cells = 0
-
-            For each cell, compute the taxicab (Manhattan) distance to the nearest 0.
+            Find the distance to the nearest 0 for each cell in the matrix image:
 
             Output format: Matrix with space-separated distances, newlines between rows.
             Example for a 2x2 result:

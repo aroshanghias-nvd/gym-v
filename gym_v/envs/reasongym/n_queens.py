@@ -87,10 +87,6 @@ class ReasoningGymNQueensEnv(Env):
         return dedent(f"""
             Your job is to complete an {n} x {n} chess board with {n} Queens in total, ssuch that no two attack each other.
 
-            In the image:
-            - Queens are shown as ♛ symbols
-            - Empty squares (where you can place queens) are blank
-
             No two queens attack each other if they are not in the same row, column, or diagonal.
             Your job is to place {num_removed} more queen(s) on the board such that no two queens attack each other.
 
