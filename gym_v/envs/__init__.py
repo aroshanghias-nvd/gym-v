@@ -367,3 +367,64 @@ register(
     max_episode_steps=1,
     kwargs=dict(),
 )
+
+# VGRP-Bench environments
+register(
+    id="VGRP/Binairo-v0",
+    entry_point="gym_v.envs.vgrp.binairo:VGRPBinairoEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=6,
+        num_hints=12,
+        cell_px=60,
+        padding=24,
+    ),
+)
+
+register(
+    id="VGRP/Thermometers-v0",
+    entry_point="gym_v.envs.vgrp.thermometers:VGRPThermometersEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=5,
+        num_hints=0,
+        cell_px=60,
+        padding=50,
+    ),
+)
+
+register(
+    id="VGRP/TreesAndTents-v0",
+    entry_point="gym_v.envs.vgrp.treesandtents:VGRPTreesAndTentsEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=5,
+        num_hints=0,
+        cell_px=60,
+        padding=50,
+    ),
+)
+
+register(
+    id="VGRP/Battleships-v0",
+    entry_point="gym_v.envs.vgrp.battleships:VGRPBattleshipsEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=6,
+        num_hints=0,
+        cell_px=55,
+        padding=50,
+    ),
+)
+
+register(
+    id="VGRP/LightUp-v0",
+    entry_point="gym_v.envs.vgrp.lightup:VGRPLightUpEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=5,
+        num_hints=0,
+        cell_px=60,
+        padding=30,
+    ),
+)
