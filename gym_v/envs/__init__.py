@@ -359,3 +359,11 @@ register(
         cell_size=40,
     ),
 )
+
+# Offline datasets
+register(
+    id="Offline/SingleTurn-v0",
+    entry_point="gym_v.envs.offline.single_turn:OfflineSingleTurnEnv",
+    max_episode_steps=1,
+    kwargs=dict(),
+)
