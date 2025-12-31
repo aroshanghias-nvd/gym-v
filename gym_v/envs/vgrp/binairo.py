@@ -10,9 +10,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from gym_v import Env, Observation, get_logger
-from gym_v.envs.vgrp.puzzle_generator import generate_puzzle
 
-from .vgrp_factories import BinairoPuzzleFactory
+from .vgrp_logic import BinairoPuzzleFactory, generate_puzzle
 
 logger = get_logger()
 
@@ -129,16 +128,34 @@ class VGRPBinairoEnv(Env):
         return obs, reward, True, False, info
 
     def _check_solution(self, answer_board: list[list[str]]) -> bool:
-        """Check if the answer matches the solution."""
+        """Check if the answer matches the solution or satisfies constraints."""
         if len(answer_board) != self._size:
             return False
         for i in range(self._size):
             if len(answer_board[i]) != self._size:
                 return False
+
+        # 1. Exact match with generated solution
+        matches_solution = True
+        for i in range(self._size):
             for j in range(self._size):
                 if answer_board[i][j] != self._solution_board[i][j]:
-                    return False
-        return True
+                    matches_solution = False
+                    break
+            if not matches_solution:
+                break
+
+        if matches_solution:
+            return True
+
+        # 2. Check validity using Factory (VGRP logic)
+        # Ensure board is fully filled (no 0s)
+        for row in answer_board:
+            if 0 in row:
+                return False
+
+        game_state = {"board": answer_board}
+        return self._factory.check(game_state)
 
     def _board_to_text(self, board: list[list[str]]) -> str:
         """Convert board to text format."""

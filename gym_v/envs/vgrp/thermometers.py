@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
 
-from .vgrp_factories import ThermometersPuzzleFactory
+from .vgrp_logic import ThermometersPuzzleFactory, generate_puzzle
 
 logger = get_logger()
 
@@ -44,12 +44,12 @@ class VGRPThermometersEnv(Env):
         self._padding = padding
 
         self._seed: int | None = None
-        self._factory = ThermometersPuzzleFactory(size)
         self._puzzle_board: list[list[str]] | None = None
         self._solution_board: list[list[str]] | None = None
         self._thermometers: list[list[tuple[int, int]]] | None = None
         self._row_counts: list[int] | None = None
         self._col_counts: list[int] | None = None
+        self._factory = ThermometersPuzzleFactory(size)
 
     @property
     def description(self) -> str:
@@ -93,8 +93,44 @@ class VGRPThermometersEnv(Env):
         # Generate thermometers configuration
         self._thermometers = self._generate_thermometers()
 
-        # Generate solution directly (not via backtracking due to circular dependency)
-        self._solution_board = self._generate_thermometer_solution()
+        # Generate solution using generate_puzzle
+        # We need to pass the thermometers structure to the factory constraints
+        # Note: ConstraintThermometerCount uses row_counts/col_counts.
+        # If we pass 0 counts, it will try to generate empty board?
+        # No, "If board is incomplete, check <= count". "If complete, check == count".
+        # If we pass 0 counts, it will enforce empty solution.
+        # But we want to GENERATE a filled solution.
+        # Catch 22: We need counts to generate solution, but we calculate counts FROM solution.
+        # Solution: Use random filling (my custom logic) OR
+        # Temporarily disable Count constraint by passing None?
+        # vgrp_logic checks: `if not clues: return True`.
+        # So if we pass only thermometers in clues (or just don't pass counts),
+        # ConstraintThermometerCount might fail key error or we need to handle it.
+        # In vgrp_logic: `row_counts = clues["row_counts"]`. It will crash if missing.
+        # So we MUST calculate counts first? No, we don't know solution.
+
+        # We can implement a "relaxed" generation where we only check ThermometerFill.
+        # But we can't easily modify the factory instance's constraints dynamically without side effects?
+        # Actually we can:
+        original_constraints = self._factory.constraints
+        # Filter out Count constraint
+        self._factory.constraints = [
+            c for c in original_constraints if c.name != "constraint_thermometer_count"
+        ]
+
+        # Need to ensure clues dict is present for ConstraintThermometerFill
+        clues_only_thermo = {"thermometers": self._thermometers}
+        result = generate_puzzle(
+            self._factory, self._size, num_hints=0, clues=clues_only_thermo
+        )
+
+        # Restore constraints
+        self._factory.constraints = original_constraints
+
+        if result is None:
+            raise RuntimeError("Failed to generate Thermometers solution")
+
+        _, self._solution_board = result
 
         # Calculate row/col counts from solution
         self._row_counts = [
@@ -181,19 +217,6 @@ class VGRPThermometersEnv(Env):
 
         return thermometers if thermometers else [[(0, 0), (0, 1)]]
 
-    def _generate_thermometer_solution(self) -> list[list[str]]:
-        """Generate solution by randomly filling thermometers."""
-        solution = [["e" for _ in range(self._size)] for _ in range(self._size)]
-
-        # For each thermometer, randomly decide how many cells to fill (from bulb)
-        for thermo in self._thermometers:
-            fill_count = np.random.randint(0, len(thermo) + 1)
-            for idx in range(fill_count):
-                r, c = thermo[idx]
-                solution[r][c] = "s"
-
-        return solution
-
     def inner_step(
         self, action: str
     ) -> tuple[Observation, float, bool, bool, dict[str, Any]]:
@@ -223,10 +246,30 @@ class VGRPThermometersEnv(Env):
         for i in range(self._size):
             if len(answer_board[i]) != self._size:
                 return False
+
+        # 1. Exact match
+        matches_solution = True
+        for i in range(self._size):
             for j in range(self._size):
                 if answer_board[i][j] != self._solution_board[i][j]:
-                    return False
-        return True
+                    matches_solution = False
+                    break
+            if not matches_solution:
+                break
+
+        if matches_solution:
+            return True
+
+        # 2. VGRP Check
+        game_state = {
+            "board": answer_board,
+            "clues": {
+                "thermometers": self._thermometers,
+                "row_counts": self._row_counts,
+                "col_counts": self._col_counts,
+            },
+        }
+        return self._factory.check(game_state)
 
     def _board_to_text_with_clues(self) -> str:
         """Convert board to text with clues."""

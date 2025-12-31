@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
 
-from .vgrp_factories import BattleshipsPuzzleFactory
+from .vgrp_logic import BattleshipsPuzzleFactory, generate_puzzle
 
 logger = get_logger()
 
@@ -44,12 +44,12 @@ class VGRPBattleshipsEnv(Env):
         self._padding = padding
 
         self._seed: int | None = None
-        self._factory = BattleshipsPuzzleFactory(size)
         self._puzzle_board: list[list[str]] | None = None
         self._solution_board: list[list[str]] | None = None
         self._row_hints: list[int] | None = None
         self._col_hints: list[int] | None = None
         self._ships: dict[int, int] | None = None  # {length: count}
+        self._factory = BattleshipsPuzzleFactory(size)
 
     @property
     def description(self) -> str:
@@ -93,17 +93,28 @@ class VGRPBattleshipsEnv(Env):
 
         # Define ship fleet (standard for 6x6)
         if self._size <= 6:
-            self._ships = {
-                4: 1,
-                3: 1,
-                2: 1,
-                1: 1,
-            }  # 1 battleship, 1 cruiser, 1 destroyer, 1 submarine
+            self._ships = {4: 1, 3: 1, 2: 1, 1: 1}
         else:
             self._ships = {4: 1, 3: 2, 2: 2, 1: 2}
 
-        # Generate solution directly
-        self._solution_board = self._generate_ships_solution()
+        # Use official generation mechanism
+        # Temporarily disable hint constraints because we don't have hints yet
+        original_constraints = self._factory.constraints
+        self._factory.constraints = [
+            c for c in original_constraints if c.name == "constraint_battleships"
+        ]
+
+        result = generate_puzzle(
+            self._factory, self._size, num_hints=0, max_attempts=5000
+        )
+
+        # Restore constraints
+        self._factory.constraints = original_constraints
+
+        if result is None:
+            raise RuntimeError("Failed to generate Battleships puzzle")
+
+        _, self._solution_board = result
 
         # Calculate row/col hints from solution
         self._row_hints = [
@@ -128,44 +139,6 @@ class VGRPBattleshipsEnv(Env):
         }
         return obs, info
 
-    def _generate_ships_solution(self) -> list[list[str]]:
-        """Generate solution by placing ships."""
-        solution = [["e" for _ in range(self._size)] for _ in range(self._size)]
-
-        # Place ships
-        for length, count in sorted(self._ships.items(), reverse=True):
-            for _ in range(count):
-                placed = False
-                attempts = 0
-                while not placed and attempts < 100:
-                    # Random position and orientation
-                    horizontal = np.random.random() < 0.5
-                    if horizontal:
-                        r = np.random.randint(0, self._size)
-                        c = np.random.randint(0, self._size - length + 1)
-                        # Check if can place
-                        can_place = all(
-                            solution[r][c + i] == "e" for i in range(length)
-                        )
-                        if can_place:
-                            for i in range(length):
-                                solution[r][c + i] = "s"
-                            placed = True
-                    else:
-                        r = np.random.randint(0, self._size - length + 1)
-                        c = np.random.randint(0, self._size)
-                        # Check if can place
-                        can_place = all(
-                            solution[r + i][c] == "e" for i in range(length)
-                        )
-                        if can_place:
-                            for i in range(length):
-                                solution[r + i][c] = "s"
-                            placed = True
-                    attempts += 1
-
-        return solution
-
     def inner_step(
         self, action: str
     ) -> tuple[Observation, float, bool, bool, dict[str, Any]]:
@@ -189,16 +162,36 @@ class VGRPBattleshipsEnv(Env):
         return obs, reward, terminated, truncated, info
 
     def _check_solution(self, answer_board: list[list[str]]) -> bool:
-        """Check if the answer matches the solution."""
+        """Check if the answer matches the solution or satisfies constraints."""
         if len(answer_board) != self._size:
             return False
         for i in range(self._size):
             if len(answer_board[i]) != self._size:
                 return False
+
+        # 1. Check if it matches ground truth (fastest)
+        matches_solution = True
+        for i in range(self._size):
             for j in range(self._size):
                 if answer_board[i][j] != self._solution_board[i][j]:
-                    return False
-        return True
+                    matches_solution = False
+                    break
+            if not matches_solution:
+                break
+
+        if matches_solution:
+            return True
+
+        # 2. Check VGRP constraints (allows alternative valid solutions)
+        game_state = {
+            "board": answer_board,
+            "hints": {
+                "row_hints": self._row_hints,
+                "col_hints": self._col_hints,
+                "ships": self._ships,
+            },
+        }
+        return self._factory.check(game_state)
 
     def _board_to_text_with_clues(self) -> str:
         """Convert board to text with clues."""

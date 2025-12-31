@@ -429,18 +429,6 @@ register(
 )
 
 register(
-    id="VGRP/FieldExplore-v0",
-    entry_point="gym_v.envs.vgrp.fieldexplore:VGRPFieldExploreEnv",
-    max_episode_steps=1,
-    kwargs=dict(
-        size=8,
-        num_mines=10,
-        cell_px=50,
-        padding=30,
-    ),
-)
-
-register(
     id="VGRP/Futoshiki-v0",
     entry_point="gym_v.envs.vgrp.futoshiki:VGRPFutoshikiEnv",
     max_episode_steps=1,

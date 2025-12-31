@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
 
-from .vgrp_factories import TreesAndTentsPuzzleFactory
+from .vgrp_logic import TreesAndTentsPuzzleFactory, generate_puzzle
 
 logger = get_logger()
 
@@ -44,12 +44,12 @@ class VGRPTreesAndTentsEnv(Env):
         self._padding = padding
 
         self._seed: int | None = None
-        self._factory = TreesAndTentsPuzzleFactory(size)
         self._puzzle_board: list[list[str]] | None = None
         self._solution_board: list[list[str]] | None = None
         self._tree_positions: list[tuple[int, int]] | None = None
         self._row_clues: list[int] | None = None
         self._col_clues: list[int] | None = None
+        self._factory = TreesAndTentsPuzzleFactory(size)
 
     @property
     def description(self) -> str:
@@ -86,8 +86,34 @@ class VGRPTreesAndTentsEnv(Env):
         # Generate tree positions
         self._tree_positions = self._generate_trees()
 
-        # Generate solution directly
-        self._solution_board = self._generate_tents_solution()
+        # Prepare initial board with trees
+        init_board = [[0 for _ in range(self._size)] for _ in range(self._size)]
+        for r, c in self._tree_positions:
+            init_board[r][c] = "tr"
+
+        original_constraints = self._factory.constraints
+        self._factory.constraints = [
+            c
+            for c in original_constraints
+            if c.name
+            in [
+                "constraint_tent_tree",
+                "constraint_adjacent_tents",
+                "constraint_tent_tree_count",
+            ]
+        ]
+
+        result = generate_puzzle(
+            self._factory, self._size, num_hints=0, initial_board=init_board
+        )
+
+        # Restore constraints
+        self._factory.constraints = original_constraints
+
+        if result is None:
+            raise RuntimeError("Failed to generate Trees and Tents solution")
+
+        _, self._solution_board = result
 
         # Calculate row/col clues from solution
         self._row_clues = [
@@ -130,32 +156,6 @@ class VGRPTreesAndTentsEnv(Env):
 
         return trees
 
-    def _generate_tents_solution(self) -> list[list[str]]:
-        """Generate solution by placing tents next to trees."""
-        solution = [["e" for _ in range(self._size)] for _ in range(self._size)]
-
-        # Place trees
-        for r, c in self._tree_positions:
-            solution[r][c] = "tr"
-
-        # Place tents next to trees (simple strategy)
-        used_tents = set()
-        for r, c in self._tree_positions:
-            # Try to place tent adjacent
-            for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-                nr, nc = r + dr, c + dc
-                if (
-                    0 <= nr < self._size
-                    and 0 <= nc < self._size
-                    and (nr, nc) not in used_tents
-                    and solution[nr][nc] == "e"
-                ):
-                    solution[nr][nc] = "tt"
-                    used_tents.add((nr, nc))
-                    break
-
-        return solution
-
     def inner_step(
         self, action: str
     ) -> tuple[Observation, float, bool, bool, dict[str, Any]]:
@@ -185,10 +185,32 @@ class VGRPTreesAndTentsEnv(Env):
         for i in range(self._size):
             if len(answer_board[i]) != self._size:
                 return False
+
+        # 1. Exact match
+        matches_solution = True
+        for i in range(self._size):
             for j in range(self._size):
                 if answer_board[i][j] != self._solution_board[i][j]:
-                    return False
-        return True
+                    matches_solution = False
+                    break
+            if not matches_solution:
+                break
+
+        if matches_solution:
+            return True
+
+        # 2. VGRP check
+        merged_board = [row[:] for row in answer_board]
+        for r in range(self._size):
+            for c in range(self._size):
+                if self._puzzle_board[r][c] == "tr":
+                    merged_board[r][c] = "tr"
+
+        game_state = {
+            "board": merged_board,
+            "clues": {"row_clues": self._row_clues, "col_clues": self._col_clues},
+        }
+        return self._factory.check(game_state)
 
     def _board_to_text_with_clues(self) -> str:
         """Convert board to text with clues."""

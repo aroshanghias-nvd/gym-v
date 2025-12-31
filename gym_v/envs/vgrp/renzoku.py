@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 
 from gym_v import Env, Observation, get_logger
 
-from .vgrp_factories import RenzokuPuzzleFactory
+from .vgrp_logic import RenzokuPuzzleFactory, generate_puzzle
 
 logger = get_logger()
 
@@ -45,14 +45,13 @@ class VGRPRenzokuEnv(Env):
         self._padding = padding
 
         self._seed: int | None = None
-        self._factory = RenzokuPuzzleFactory(size)
-
         # State
         self._solution_board: list[list[int]] | None = None
         self._hints: dict[str, list[list[str]]] | None = (
             None  # {'row': ..., 'col': ...}
         )
         self._puzzle_board: list[list[int]] | None = None
+        self._factory = RenzokuPuzzleFactory(size)
 
     @property
     def description(self) -> str:
@@ -87,8 +86,26 @@ class VGRPRenzokuEnv(Env):
         if seed is not None:
             np.random.seed(seed)
 
-        # 1. Generate Sudoku solution
-        self._solution_board = self._generate_sudoku_solution()
+        # 1. Generate Sudoku solution using generate_puzzle
+        # Renzoku without hints is just a Latin Square (due to current factory constraints)
+        # However, to be a valid SUDOKU (blocks), Renzoku factory doesn't enforce blocks?
+        # Let's check RenzokuPuzzleFactory constraints.
+        # It has RowNoRepeat, ColNoRepeat, Adjacency. No Subgrid.
+        # So it generates a Latin Square that respects adjacency.
+        # If we pass empty hints, it generates a Latin Square.
+
+        hints = {
+            "row": [["0" for _ in range(self._size - 1)] for _ in range(self._size)],
+            "col": [["0" for _ in range(self._size)] for _ in range(self._size - 1)],
+        }
+
+        result = generate_puzzle(
+            self._factory, self._size, num_hints=0, hints=hints, max_attempts=1000
+        )
+        if result is None:
+            raise RuntimeError("Failed to generate Renzoku solution")
+
+        _, self._solution_board = result
 
         # 2. Generate hints (dots)
         self._hints = self._generate_hints(self._solution_board)
@@ -186,15 +203,34 @@ class VGRPRenzokuEnv(Env):
         return {"row": row_hints, "col": col_hints}
 
     def _check_solution(self, answer_board: list[list[int]]) -> bool:
+        """Check if the answer matches the solution or satisfies constraints."""
         if len(answer_board) != self._size:
             return False
         for i in range(self._size):
             if len(answer_board[i]) != self._size:
                 return False
+
+        # 1. Exact match
+        matches_solution = True
+        for i in range(self._size):
             for j in range(self._size):
                 if answer_board[i][j] != self._solution_board[i][j]:
-                    return False
-        return True
+                    matches_solution = False
+                    break
+            if not matches_solution:
+                break
+
+        if matches_solution:
+            return True
+
+        # 2. VGRP check
+        # Must be complete (no 0s)
+        for row in answer_board:
+            if 0 in row:
+                return False
+
+        game_state = {"board": answer_board, "hints": self._hints}
+        return self._factory.check(game_state)
 
     def _board_to_text(self, board: list[list[int]]) -> str:
         return "\n".join(" ".join(str(x) for x in row) for row in board)

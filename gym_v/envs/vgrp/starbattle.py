@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 
 from gym_v import Env, Observation, get_logger
 
-from .vgrp_factories import StarBattlePuzzleFactory
+from .vgrp_logic import StarBattlePuzzleFactory, generate_puzzle
 
 logger = get_logger()
 
@@ -47,11 +47,10 @@ class VGRPStarBattleEnv(Env):
         self._padding = padding
 
         self._seed: int | None = None
-        self._factory = StarBattlePuzzleFactory(size)
-
         self._solution_board: list[list[str]] | None = None  # 's' (star), 'e' (empty)
         self._regions: list[list[int]] | None = None  # Grid of region IDs
         self._puzzle_board: list[list[str]] | None = None  # Empty initially
+        self._factory = StarBattlePuzzleFactory(size, stars_per_group)
 
     @property
     def description(self) -> str:
@@ -82,11 +81,51 @@ class VGRPStarBattleEnv(Env):
         if seed is not None:
             np.random.seed(seed)
 
-        # 1. Generate Solution (Stars)
-        self._solution_board = self._generate_stars()
+        # 1. Generate Regions first (Structure)
+        # We need regions to validate stars in StarBattle logic
+        # But usually one places stars then grows regions.
+        # If we use generate_puzzle (solver), we MUST have regions defined.
+        # So we must generate regions first.
+        # But generating valid regions that SUPPORT a valid star placement is hard without stars.
+        # Chicken and egg.
+        # However, we can generate random regions, then try to solve.
+        # If solve fails (impossible regions), retry region generation.
 
-        # 2. Generate Regions
-        self._regions = self._generate_regions(self._solution_board)
+        for _retry in range(10):
+            # Use a dummy stars placement just to seed regions, then discard stars?
+            # Or use my region generator which is robust.
+            # My _generate_regions needed a solution to guarantee validity.
+            # "We need K regions... Each region needs N stars... group stars... grow regions"
+            # This construction method GUARANTEES a solution exists.
+            # If I generate purely random regions (Voronoi?), they might be unsolvable.
+            # So I WILL keep the construction logic: Generate Stars -> Generate Regions -> (Optional: Re-solve to verify?)
+            # The user said "use official generation mechanism".
+            # Official mechanism is: Solver.
+            # Solver requires Regions.
+            # So I must provide regions.
+            # Providing regions that have at least one solution is best done by construction.
+            # So I will keep _generate_stars and _generate_regions to CREATE the problem instance.
+            # Then, I can optionally run generate_puzzle to "prove" it's solvable or just use the stars I generated.
+            # Actually, if I already generated stars to make regions, I have the solution.
+            # Calling generate_puzzle again is redundant but proves it works with the official solver.
+            # Let's do that to ensure "official mechanism" compatibility.
+
+            temp_stars = self._generate_stars_heuristic()
+            if temp_stars is None:
+                continue
+
+            self._regions = self._generate_regions(temp_stars)
+
+            # Now solve using official solver
+            result = generate_puzzle(
+                self._factory, self._size, num_hints=0, regions=self._regions
+            )
+
+            if result is not None:
+                _, self._solution_board = result
+                break
+        else:
+            raise RuntimeError("Failed to generate StarBattle puzzle after 10 attempts")
 
         # 3. Puzzle State
         self._puzzle_board = [
@@ -125,65 +164,10 @@ class VGRPStarBattleEnv(Env):
         }
         return obs, reward, True, False, info
 
-    def _generate_stars(self) -> list[list[str]]:
-        # Backtracking to place stars
-        board = [["e" for _ in range(self._size)] for _ in range(self._size)]
-
-        def is_safe(r, c):
-            # Row check
-            if board[r].count("s") >= self._stars_per_group:
-                return False
-            # Col check
-            col_count = sum(1 for i in range(self._size) if board[i][c] == "s")
-            if col_count >= self._stars_per_group:
-                return False
-            # Neighbors check
-            for dr in [-1, 0, 1]:
-                for dc in [-1, 0, 1]:
-                    if dr == 0 and dc == 0:
-                        continue
-                    nr, nc = r + dr, c + dc
-                    if 0 <= nr < self._size and 0 <= nc < self._size:
-                        if board[nr][nc] == "s":
-                            return False
-            return True
-
-        def solve(idx):
-            if idx >= self._size * self._size:
-                # Check all counts
-                for i in range(self._size):
-                    if board[i].count("s") != self._stars_per_group:
-                        return False
-                    if (
-                        sum(1 for r in range(self._size) if board[r][i] == "s")
-                        != self._stars_per_group
-                    ):
-                        return False
-                return True
-
-            r, c = idx // self._size, idx % self._size
-
-            # Try placing star
-            if is_safe(r, c):
-                board[r][c] = "s"
-                if solve(idx + 1):
-                    return True
-                board[r][c] = "e"
-
-            # Try skipping
-            # Heuristic: if row needs stars, prefer placing?
-            # Just standard backtrack
-            if solve(idx + 1):
-                return True
-            return False
-
-        # Standard backtrack is too slow for 8x8+.
-        # Randomized greedy with restart?
-        # Or place row by row.
-
-        # Simplified generation for demo:
+    def _generate_stars_heuristic(self) -> list[list[str]] | None:
+        # Simplified generation for seeding regions:
         attempts = 0
-        while attempts < 1000:
+        while attempts < 100:
             board = [["e" for _ in range(self._size)] for _ in range(self._size)]
             # Try to place row by row
             success = True
@@ -192,7 +176,32 @@ class VGRPStarBattleEnv(Env):
                 cols = list(range(self._size))
                 np.random.shuffle(cols)
                 for c in cols:
-                    if is_safe(r, c):
+                    # Check safety (simplified copy of backtracking logic inside env?
+                    # No, we can use a local helper or just inline simple checks)
+                    # Check row, col, neighbors
+                    if board[r].count("s") >= self._stars_per_group:
+                        break
+                    col_count = sum(1 for i in range(self._size) if board[i][c] == "s")
+                    if col_count >= self._stars_per_group:
+                        continue
+
+                    safe = True
+                    for dr in [-1, 0, 1]:
+                        for dc in [-1, 0, 1]:
+                            if dr == 0 and dc == 0:
+                                continue
+                            nr, nc = r + dr, c + dc
+                            if (
+                                0 <= nr < self._size
+                                and 0 <= nc < self._size
+                                and board[nr][nc] == "s"
+                            ):
+                                safe = False
+                                break
+                        if not safe:
+                            break
+
+                    if safe:
                         board[r][c] = "s"
                         placed += 1
                         if placed == self._stars_per_group:
@@ -201,17 +210,9 @@ class VGRPStarBattleEnv(Env):
                     success = False
                     break
             if success:
-                # Verify columns
-                if all(
-                    sum(1 for r in range(self._size) if board[r][c] == "s")
-                    == self._stars_per_group
-                    for c in range(self._size)
-                ):
-                    return board
+                return board
             attempts += 1
-
-        # Fallback (may be invalid, but structure ok)
-        return board
+        return None
 
     def _generate_regions(self, solution: list[list[str]]) -> list[list[int]]:
         regions = [[-1 for _ in range(self._size)] for _ in range(self._size)]
@@ -306,10 +307,23 @@ class VGRPStarBattleEnv(Env):
         for i in range(self._size):
             if len(answer_board[i]) != self._size:
                 return False
+
+        # 1. Exact match
+        matches_solution = True
+        for i in range(self._size):
             for j in range(self._size):
                 if answer_board[i][j] != self._solution_board[i][j]:
-                    return False
-        return True
+                    matches_solution = False
+                    break
+            if not matches_solution:
+                break
+
+        if matches_solution:
+            return True
+
+        # 2. VGRP check
+        game_state = {"board": answer_board, "regions": self._regions}
+        return self._factory.check(game_state)
 
     def _board_to_text(self, board: list[list[str]]) -> str:
         return "\n".join(" ".join(row) for row in board)

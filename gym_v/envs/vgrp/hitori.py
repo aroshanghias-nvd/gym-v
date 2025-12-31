@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
 
-from .vgrp_factories import HitoriPuzzleFactory
+from .vgrp_logic import HitoriPuzzleFactory
 
 logger = get_logger()
 
@@ -46,12 +46,11 @@ class VGRPHitoriEnv(Env):
         self._padding = padding
 
         self._seed: int | None = None
-        self._factory = HitoriPuzzleFactory(size)
-
         self._solution_board: list[list[str]] | None = (
             None  # 'e' (empty/white), 's' (shaded)
         )
         self._number_grid: list[list[int]] | None = None  # The numbers shown to player
+        self._factory = HitoriPuzzleFactory(size)
 
         # Puzzle state for player is just the numbers. The action is the shading pattern.
         # So we don't store a "puzzle_board" that changes state,
@@ -225,8 +224,7 @@ class VGRPHitoriEnv(Env):
             return False
 
         if not solve(0):
-            # Fallback (should ideally retry pattern generation)
-            return [[1] * self._size] * self._size
+            raise RuntimeError("Failed to generate Hitori number grid")
 
         # Fill shaded cells with conflicting numbers
         for r in range(self._size):
@@ -256,10 +254,23 @@ class VGRPHitoriEnv(Env):
         for i in range(self._size):
             if len(answer_board[i]) != self._size:
                 return False
+
+        # 1. Exact match
+        matches_solution = True
+        for i in range(self._size):
             for j in range(self._size):
                 if answer_board[i][j] != self._solution_board[i][j]:
-                    return False
-        return True
+                    matches_solution = False
+                    break
+            if not matches_solution:
+                break
+
+        if matches_solution:
+            return True
+
+        # 2. VGRP check
+        game_state = {"board": answer_board, "numbers": self._number_grid}
+        return self._factory.check(game_state)
 
     def _board_to_text_numbers(self) -> str:
         return "\n".join(" ".join(str(x) for x in row) for row in self._number_grid)
