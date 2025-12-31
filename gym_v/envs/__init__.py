@@ -367,3 +367,97 @@ register(
     max_episode_steps=1,
     kwargs=dict(),
 )
+
+# VGRP-Bench environments
+register(
+    id="VGRP/Binairo-v0",
+    entry_point="gym_v.envs.vgrp.binairo:VGRPBinairoEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=6,
+        num_hints=12,
+        cell_px=60,
+        padding=24,
+    ),
+)
+
+register(
+    id="VGRP/Thermometers-v0",
+    entry_point="gym_v.envs.vgrp.thermometers:VGRPThermometersEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=5,
+        num_hints=0,
+        cell_px=60,
+        padding=50,
+    ),
+)
+
+register(
+    id="VGRP/TreesAndTents-v0",
+    entry_point="gym_v.envs.vgrp.treesandtents:VGRPTreesAndTentsEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=5,
+        num_hints=0,
+        cell_px=60,
+        padding=50,
+    ),
+)
+
+register(
+    id="VGRP/Battleships-v0",
+    entry_point="gym_v.envs.vgrp.battleships:VGRPBattleshipsEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=6,
+        num_hints=0,
+        cell_px=55,
+        padding=50,
+    ),
+)
+
+register(
+    id="VGRP/Renzoku-v0",
+    entry_point="gym_v.envs.vgrp.renzoku:VGRPRenzokuEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=9,
+        cell_px=50,
+        padding=30,
+    ),
+)
+
+register(
+    id="VGRP/Futoshiki-v0",
+    entry_point="gym_v.envs.vgrp.futoshiki:VGRPFutoshikiEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=5,
+        cell_px=60,
+        padding=30,
+    ),
+)
+
+register(
+    id="VGRP/Hitori-v0",
+    entry_point="gym_v.envs.vgrp.hitori:VGRPHitoriEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=6,
+        cell_px=50,
+        padding=20,
+    ),
+)
+
+register(
+    id="VGRP/StarBattle-v0",
+    entry_point="gym_v.envs.vgrp.starbattle:VGRPStarBattleEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        size=8,
+        stars_per_group=1,
+        cell_px=50,
+        padding=20,
+    ),
+)
