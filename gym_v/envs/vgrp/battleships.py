@@ -73,6 +73,13 @@ class VGRPBattleshipsEnv(Env):
 
             Output format: A {self._size}x{self._size} grid with 's' (ship) or 'e' (empty/water)
             separated by spaces within rows, and newlines separating rows.
+            Example for 6x6:
+            e e s s e e
+            s s s e e e
+            e e e e e e
+            s e s s s s
+            e e e e e e
+            e e s s s e
         """).strip()
 
     def reset(

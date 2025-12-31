@@ -64,6 +64,14 @@ class VGRPStarBattleEnv(Env):
             3. Stars cannot touch each other, even diagonally.
 
             Output format: A {self._size}x{self._size} grid with 's' for Star and 'e' for Empty.
+            separated by spaces within rows, and newlines separating rows.
+            Example for 6x6:
+            e e s s e e
+            s s s e e e
+            e e e e e e
+            s e s s s s
+            e e e e e e
+            e e s s s e
         """).strip()
 
     def reset(

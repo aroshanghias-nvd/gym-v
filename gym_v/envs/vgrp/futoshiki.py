@@ -63,6 +63,13 @@ class VGRPFutoshikiEnv(Env):
                - '^' or 'v' between vertical neighbors.
 
             Output format: A {self._size}x{self._size} grid with numbers separated by spaces.
+            separated by spaces within rows, and newlines separating rows.
+            Example for 5x5:
+            1 2 3 4 5
+            2 3 4 5 1
+            3 4 5 1 2
+            4 5 1 2 3
+            5 1 2 3 4
         """).strip()
 
     def reset(
