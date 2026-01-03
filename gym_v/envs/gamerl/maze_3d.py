@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import random
+from textwrap import dedent
 from typing import Any
 
 import numpy as np
@@ -127,18 +128,19 @@ class GameRL3dMazeQAEnv(Env):
 
     @property
     def description(self) -> str:
-        base_rules = """3D Maze Game Rules:
+        base_rules = dedent("""
+            3D Maze Game Rules:
 
-1. Player can only walk on top of cubes
-2. Player can climb ladders if they can reach the cube under the ladder
-3. From a ladder, player can reach the top of the last cube with the ladder
-4. Blue cube is start position, red cube is goal position
-5. Green cubes are special points (branches or checkpoints)
-6. Numbered cubes indicate branch points or checkpoints
+            1. Player can only walk on top of cubes
+            2. Player can climb ladders if they can reach the cube under the ladder
+            3. From a ladder, player can reach the top of the last cube with the ladder
+            4. Blue cube is start position, red cube is goal position
+            5. Green cubes are special points (branches or checkpoints)
+            6. Numbered cubes indicate branch points or checkpoints
 
-The player must navigate from the start (blue) to the goal (red) by walking on cubes
-and climbing ladders when available.
-"""
+            The player must navigate from the start (blue) to the goal (red) by walking on cubes
+            and climbing ladders when available.
+        """).strip()
 
         # Add question and answer format if question has been generated
         if hasattr(self, "_question") and self._question:

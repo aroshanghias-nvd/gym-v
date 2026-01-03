@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -630,11 +631,13 @@ class GameRLChessRangerQAEnv(Env):
         },
     ]
 
-    GAME_RULES = """This game is called Chess Ranger. The rules are as follows:
-- Pieces move like in standard chess
-- You can only perform capture moves
-- The king is allowed to be captured
-- The goal is to end up with a single piece remaining on the board"""
+    GAME_RULES = dedent("""
+        This game is called Chess Ranger. The rules are as follows:
+        - Pieces move like in standard chess
+        - You can only perform capture moves
+        - The king is allowed to be captured
+        - The goal is to end up with a single piece remaining on the board
+    """).strip()
 
     def __init__(self, num_pieces: int = 6, question_type: int | None = None, **kwargs):
         super().__init__(**kwargs)

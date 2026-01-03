@@ -15,24 +15,24 @@ logger = get_logger()
 
 # Removed module-level QUESTION_TYPES - now defined as class variable
 
-GAME_RULES = """
-This is Langton's Ant, a cellular automaton with simple rules:
+GAME_RULES = dedent("""
+    This is Langton's Ant, a cellular automaton with simple rules:
 
-Rules:
-- At a WHITE cell: turn 90° RIGHT, flip cell to BLACK, move forward one unit
-- At a BLACK cell: turn 90° LEFT, flip cell to WHITE, move forward one unit
-- The ant wraps around the edges of the grid
+    Rules:
+    - At a WHITE cell: turn 90° RIGHT, flip cell to BLACK, move forward one unit
+    - At a BLACK cell: turn 90° LEFT, flip cell to WHITE, move forward one unit
+    - The ant wraps around the edges of the grid
 
-The grid uses a coordinate system where:
-- Row coordinates are 1-N from top to bottom
-- Column coordinates are 1-N from left to right
-"""
+    The grid uses a coordinate system where:
+    - Row coordinates are 1-N from top to bottom
+    - Column coordinates are 1-N from left to right
+""").strip()
 
-ANSWER_FORMAT_PROMPT = """
-**Answer Format:**
-- For position questions: Use format like "A) (3, 2) facing up"
-- For number questions: Just provide the number
-"""
+ANSWER_FORMAT_PROMPT = dedent("""
+    **Answer Format:**
+    - For position questions: Use format like "A) (3, 2) facing up"
+    - For number questions: Just provide the number
+""").strip()
 
 
 class GameRLLangtonAntQAEnv(Env):

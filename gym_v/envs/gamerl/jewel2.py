@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 from pathlib import Path
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -269,8 +270,8 @@ class Chessboard:
 # Jewel2 QA Environment
 # ============================================================================
 
-JEWEL2_RULES = """
-# **Game Overview**
+JEWEL2_RULES = dedent("""
+    # **Game Overview**
 Jewel2 is a strategic puzzle game played on a grid. Your primary objective is to eliminate elements by forming horizontal or vertical lines of three or more identical items. Successfully eliminating elements increases your score and clears space on the board for new elements to appear.
 
 # **Elements**
@@ -358,7 +359,7 @@ Jewel2 is a strategic puzzle game played on a grid. Your primary objective is to
 
 # **Objective**
 Maximize your **Total Cleared** count by strategically performing clear and swap operations to eliminate as many elements as possible. Effective use of special elements can significantly enhance your score by triggering large-scale eliminations.
-"""
+""").strip()
 
 
 class GameRLJewel2QAEnv(Env):

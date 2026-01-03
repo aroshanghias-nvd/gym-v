@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from importlib import resources
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -18,33 +19,36 @@ logger = get_logger()
 
 # Removed module-level QUESTION_TYPES - now defined as class variable
 
-GAME_RULES = """Conway's Game of Life is a cellular automaton where each cell in the grid can be either alive (black) or dead (white).
+GAME_RULES = dedent("""
+    Conway's Game of Life is a cellular automaton where each cell in the grid can be either alive (black) or dead (white).
 
-Each cell interacts with its eight neighbors, which are the cells that are horizontally, vertically, or diagonally adjacent. For a cell at position (r,c), its neighbors are:
-- (r-1,c-1)  (r-1,c)  (r-1,c+1)   [above row]
-- (r,c-1)     (r,c)    (r,c+1)     [same row]
-- (r+1,c-1)  (r+1,c)  (r+1,c+1)   [below row]
+    Each cell interacts with its eight neighbors, which are the cells that are horizontally, vertically, or diagonally adjacent. For a cell at position (r,c), its neighbors are:
+    - (r-1,c-1)  (r-1,c)  (r-1,c+1)   [above row]
+    - (r,c-1)     (r,c)    (r,c+1)     [same row]
+    - (r+1,c-1)  (r+1,c)  (r+1,c+1)   [below row]
 
-Region boundaries wrap around to the opposite side:
-- A cell at the top edge connects to cells at the bottom edge
-- A cell at the left edge connects to cells at the right edge
-- Corner cells connect to the diagonally opposite corner
+    Region boundaries wrap around to the opposite side:
+    - A cell at the top edge connects to cells at the bottom edge
+    - A cell at the left edge connects to cells at the right edge
+    - Corner cells connect to the diagonally opposite corner
 
-The game evolves in discrete steps according to these rules:
-1. Any live cell with fewer than two live neighbors dies (underpopulation)
-2. Any live cell with two or three live neighbors lives on to the next generation
-3. Any live cell with more than three live neighbors dies (overpopulation)
-4. Any dead cell with exactly three live neighbors becomes alive (reproduction)
+    The game evolves in discrete steps according to these rules:
+    1. Any live cell with fewer than two live neighbors dies (underpopulation)
+    2. Any live cell with two or three live neighbors lives on to the next generation
+    3. Any live cell with more than three live neighbors dies (overpopulation)
+    4. Any dead cell with exactly three live neighbors becomes alive (reproduction)
 
-In the image, black squares represent live cells, white squares represent dead cells, and the grid lines help visualize the cell boundaries.
+    In the image, black squares represent live cells, white squares represent dead cells, and the grid lines help visualize the cell boundaries.
 
-Coordinate System: In this grid, we use (row, col) coordinates where row increases from top to bottom (0 at top) and col increases from left to right (0 at left). For example, the top-left cell is at (0, 0), and the cell below it is at (1, 0)."""
+    Coordinate System: In this grid, we use (row, col) coordinates where row increases from top to bottom (0 at top) and col increases from left to right (0 at left). For example, the top-left cell is at (0, 0), and the cell below it is at (1, 0).
+""").strip()
 
-ANSWER_FORMAT_PROMPT = """
-**Answer Format:**
-- For multiple choice: Reply with only the letter (A, B, C, D, E, F, G, or H)
+ANSWER_FORMAT_PROMPT = dedent("""
+    **Answer Format:**
+    - For multiple choice: Reply with only the letter (A, B, C, D, E, F, G, or H)
 
-Do not include any explanation or extra text."""
+    Do not include any explanation or extra text.
+""").strip()
 
 
 class GameRLLifegameQAEnv(Env):

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import random
+from textwrap import dedent
 from typing import Any
 
 import numpy as np
@@ -130,20 +131,21 @@ class GameRLZumaQAEnv(Env):
 
     @property
     def description(self) -> str:
-        base_rules = """This is a Zuma game.
-You need to control a frog to shoot colored marbles from its mouth toward a winding track of approaching marbles.
-Your goal is to clear all marbles before they reach the black hole at the end of the track.
-The marbles roll steadily along the track, and the player must fire marbles to create groups of three or more of the same color.
-These groups will disappear, reducing the number of marbles on the track.
-The frog will shoot marbles in a straight line.
-If there is no marble on the track, the shot marble will pass through the track.
-However, the marble it shoots cannot bypass marbles already in its direct line of fire.
-In the offered pictures, the frog is represented as a white triangle,
-with the circle on it representing the next marble it will shoot.
-The colored marbles are positioned on a gray track.
-Any directions or angles mentioned in questions are relative to the center of the circle on the frog,
-with its positive x-axis as the 0-degree reference line.
-"""
+        base_rules = dedent("""
+            This is a Zuma game.
+            You need to control a frog to shoot colored marbles from its mouth toward a winding track of approaching marbles.
+            Your goal is to clear all marbles before they reach the black hole at the end of the track.
+            The marbles roll steadily along the track, and the player must fire marbles to create groups of three or more of the same color.
+            These groups will disappear, reducing the number of marbles on the track.
+            The frog will shoot marbles in a straight line.
+            If there is no marble on the track, the shot marble will pass through the track.
+            However, the marble it shoots cannot bypass marbles already in its direct line of fire.
+            In the offered pictures, the frog is represented as a white triangle,
+            with the circle on it representing the next marble it will shoot.
+            The colored marbles are positioned on a gray track.
+            Any directions or angles mentioned in questions are relative to the center of the circle on the frog,
+            with its positive x-axis as the 0-degree reference line.
+        """).strip()
 
         # Add question and answer format if question has been generated
         if hasattr(self, "_question") and self._question:

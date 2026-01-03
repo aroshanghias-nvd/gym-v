@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 import random
+from textwrap import dedent
 from typing import Any
 
 import numpy as np
@@ -100,28 +101,29 @@ class GameRLSokobanQAEnv(Env):
 
     @property
     def description(self) -> str:
-        base_rules = """Sokoban Game Rules:
+        base_rules = dedent("""
+            Sokoban Game Rules:
 
-Grid elements:
-- Empty floor (.)
-- Wall (#)
-- Box (B)
-- Target/Goal (X)
-- Player (P)
-- Box on target (*)
-- Player on target (+)
+            Grid elements:
+            - Empty floor (.)
+            - Wall (#)
+            - Box (B)
+            - Target/Goal (X)
+            - Player (P)
+            - Box on target (*)
+            - Player on target (+)
 
-Movement rules:
-- Player can move: Up, Down, Left, Right
-- Player can push one box at a time
-- Boxes can only be pushed, not pulled
-- Boxes cannot be pushed into walls or other boxes
-- Goal: Push all boxes onto target positions
+            Movement rules:
+            - Player can move: Up, Down, Left, Right
+            - Player can push one box at a time
+            - Boxes can only be pushed, not pulled
+            - Boxes cannot be pushed into walls or other boxes
+            - Goal: Push all boxes onto target positions
 
-Coordinates:
-- (row, column) format
-- (0, 0) is top-left corner
-"""
+            Coordinates:
+            - (row, column) format
+            - (0, 0) is top-left corner
+        """).strip()
 
         # Add question and answer format if question has been generated
         if hasattr(self, "_question") and self._question:

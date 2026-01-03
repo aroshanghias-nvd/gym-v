@@ -12,6 +12,7 @@ This environment provides 5 question types about game moves and strategy.
 from __future__ import annotations
 
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -19,7 +20,8 @@ from PIL import Image, ImageDraw, ImageFont
 from gym_v import Env, Observation
 
 # Game Rules
-KLONDIKE_RULES = """The given image represents the interface of the game Klondike Solitaire. The user interface consists of a board with 52 playing cards divided into four distinct areas:
+KLONDIKE_RULES = dedent("""
+    The given image represents the interface of the game Klondike Solitaire. The user interface consists of a board with 52 playing cards divided into four distinct areas:
 
 1. **Stock Pile (Draw Pile):** Initially composed of 24 face-down cards. The player can draw one card at a time to reveal its face.
 
@@ -30,7 +32,8 @@ KLONDIKE_RULES = """The given image represents the interface of the game Klondik
 4. **Tableau Piles:** There are seven tableau piles. From left to right, these piles are referred to as Tab 1 through Tab 7, and initially contain an increasing number of cards from 1 to 7. Only the topmost cards in each pile are face-up and built in descending order, alternating colors (red and black suits). Only when the topmost cards are removed to some other place (e.g. another tableau pile or the foundation pile) will the hidden card beneath be revealed. Only a King can be placed on an empty tableau pile unless it starts there at the beginning of the game.
 
 **Objective:**
-The goal of Klondike Solitaire is to move all cards to the Foundation Piles, organized by suit in ascending order from Ace to King."""
+The goal of Klondike Solitaire is to move all cards to the Foundation Piles, organized by suit in ascending order from Ace to King.
+""").strip()
 
 
 # ============================================================================

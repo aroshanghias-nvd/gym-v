@@ -10,6 +10,7 @@ This environment provides 6 question types about game states and optimal strateg
 from __future__ import annotations
 
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -479,7 +480,8 @@ def draw_pyramid_combined(layers: dict, plot_level: str) -> Image.Image:
 # ============================================================================
 
 
-PYRAMID_RULES = """Pyramid Chess Rules:
+PYRAMID_RULES = dedent("""
+    Pyramid Chess Rules:
 0. Game Board:
 The game board is square and comes in various sizes: 3x3, 4x4, or 5x5. On an nxn board, there are n levels (0 to n-1). At each level k, the x and y coordinates range from 0 to n-1-k, resulting in (n-k)**2 slots per level. The slots in the lower levels act as the base for the slots in the upper levels. Slots at level 0 have no base, while slots at level j (j!=0) with coordinates (m,n) are supported by four base slots (m,n),(m+1,n),(m,n+1),(m+1,n+1) from level j-1.
 
@@ -493,7 +495,8 @@ At the start of the game, the lowest level of the board (Level 0) is completely 
 If a player places a ball that completes a 2x2 block of the same color (all four balls belonging to that player), they may return up to two balls from the block to their color pool. A ball can only be removed if it does not have another ball directly above it, as removing a "base" ball would collapse the pyramid. Returning a ball reopens the slot it occupied, allowing it to be used for future placements, but the rule requiring a full 2x2 block as a base for placing balls on upper levels still applies.
 
 4. Winning the Game:
-The game ends when one player successfully places the last ball on top of the pyramid. The player who place the ball on the top of the pyramid wins."""
+The game ends when one player successfully places the last ball on top of the pyramid. The player who place the ball on the top of the pyramid wins.
+""").strip()
 
 
 class GameRLPyramidChessQAEnv(Env):

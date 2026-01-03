@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from importlib import resources
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -18,20 +19,23 @@ logger = get_logger()
 
 # Question types from original Game-RL
 # Removed module-level QUESTION_TYPES - now defined as class variable
-GAME_RULES_TEMPLATE = """This is a Minesweeper game. The size of the chessboard is {rows}x{cols}, and there are a total of {mines} mines hidden on the board.
+GAME_RULES_TEMPLATE = dedent("""
+    This is a Minesweeper game. The size of the chessboard is {rows}x{cols}, and there are a total of {mines} mines hidden on the board.
 
-The numbers on the board indicate how many mines are adjacent to that cell, including diagonals. Cells marked with "F" (flagged) are identified as potential locations of mines based on logical deduction or prior knowledge. These flagged cells play a critical role in guiding your reasoning for answering the questions. Cells with no numbers and no flags are safe and contain no adjacent mines.
+    The numbers on the board indicate how many mines are adjacent to that cell, including diagonals. Cells marked with "F" (flagged) are identified as potential locations of mines based on logical deduction or prior knowledge. These flagged cells play a critical role in guiding your reasoning for answering the questions. Cells with no numbers and no flags are safe and contain no adjacent mines.
 
-The board uses a coordinate system where the top-left cell corresponds to (0,0), and the rows and columns are numbered starting from 0.
+    The board uses a coordinate system where the top-left cell corresponds to (0,0), and the rows and columns are numbered starting from 0.
 
-Please use the provided board configuration and logical reasoning to deduce the correct answers to the following questions:"""
+    Please use the provided board configuration and logical reasoning to deduce the correct answers to the following questions:
+""").strip()
 
-ANSWER_FORMAT_PROMPT = """
-**Answer Format:**
-- For numbers: Reply with only the number, e.g., 7
-- For multiple choice: Reply with only the letter (A, B, C, D, E, or F)
+ANSWER_FORMAT_PROMPT = dedent("""
+    **Answer Format:**
+    - For numbers: Reply with only the number, e.g., 7
+    - For multiple choice: Reply with only the letter (A, B, C, D, E, or F)
 
-Do not include any explanation or extra text."""
+    Do not include any explanation or extra text.
+""").strip()
 
 
 class GameRLMinesweeperQAEnv(Env):

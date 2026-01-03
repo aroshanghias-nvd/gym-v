@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from itertools import combinations
 import random
+from textwrap import dedent
 from typing import Any
 
 import numpy as np
@@ -24,7 +25,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation
 
-GAME_RULES = """You are in the middle of a 3D reconstruction puzzle.
+GAME_RULES = dedent("""
+    You are in the middle of a 3D reconstruction puzzle.
 The current structure has some initial voxels, and your goal is to complete it as the game rules.
 
 Game Rules:
@@ -39,7 +41,7 @@ Game Rules:
 9. Side View (X-Z): Shows structure when viewed along the positive Y-axis direction (left to right), with X as horizontal axis and Z as vertical axis. Projection coordinates are in (x,z) format.
 10. Projection Rule: A cell shows '1' if any voxel exists along that line of sight, and '0' if no voxel exists along that line.
 11. Victory: Match both projections using available voxels.
-"""
+""").strip()
 
 
 class ThreeDReconstructionGame:

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from importlib import resources
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -18,16 +19,19 @@ logger = get_logger()
 
 # Question types from original Game-RL
 # Removed module-level QUESTION_TYPES - now defined as class variable
-GAME_RULES_TEMPLATE = """This is a sudoku game in which the board is filled with a total number of colours equal to the length of the board's sides, and no rows, columns or squares are allowed to have duplicate colours. You should fill the empty cells on the board with following {size} colors: {colors}.
+GAME_RULES_TEMPLATE = dedent("""
+    This is a sudoku game in which the board is filled with a total number of colours equal to the length of the board's sides, and no rows, columns or squares are allowed to have duplicate colours. You should fill the empty cells on the board with following {size} colors: {colors}.
 
-In this Sudoku board, the row coordinates are 1-{size} from top to bottom, and the column coordinates are 1-{size} from left to right."""
+    In this Sudoku board, the row coordinates are 1-{size} from top to bottom, and the column coordinates are 1-{size} from left to right.
+""").strip()
 
-ANSWER_FORMAT_PROMPT = """
-**Answer Format:**
-- For numbers: Reply with only the number, e.g., 7
-- For multiple choice: Reply with only the letter (A, B, C, D, E, F, G, H, or I)
+ANSWER_FORMAT_PROMPT = dedent("""
+    **Answer Format:**
+    - For numbers: Reply with only the number, e.g., 7
+    - For multiple choice: Reply with only the letter (A, B, C, D, E, F, G, H, or I)
 
-Do not include any explanation or extra text."""
+    Do not include any explanation or extra text.
+""").strip()
 
 
 class GameRLSudokuQAEnv(Env):

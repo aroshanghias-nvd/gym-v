@@ -16,20 +16,20 @@ logger = get_logger()
 
 # Question types based on Game-RL word_search main.py
 # Removed module-level QUESTION_TYPES - now defined as class variable
-GAME_RULES = """
-This is a Word Search puzzle game.
+GAME_RULES = dedent("""
+    This is a Word Search puzzle game.
 
-Rules:
-1. The grid contains uppercase letters arranged in rows and columns
-2. Words can be placed in 8 directions: right, down, diagonal-right-down, diagonal-right-up, diagonal-left-down, diagonal-left-up, up, or left
-3. Row and column indexes begin from 1 at the top-left corner
-4. Words read from start to end in the specified direction
-"""
+    Rules:
+    1. The grid contains uppercase letters arranged in rows and columns
+    2. Words can be placed in 8 directions: right, down, diagonal-right-down, diagonal-right-up, diagonal-left-down, diagonal-left-up, up, or left
+    3. Row and column indexes begin from 1 at the top-left corner
+    4. Words read from start to end in the specified direction
+""").strip()
 
-ANSWER_FORMAT_PROMPT = """
-**Answer Format:**
-- Choose the correct option by its number (1-8)
-"""
+ANSWER_FORMAT_PROMPT = dedent("""
+    **Answer Format:**
+    - Choose the correct option by its number (1-8)
+""").strip()
 
 
 class GameRLWordSearchQAEnv(Env):

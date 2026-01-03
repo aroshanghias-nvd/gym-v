@@ -9,6 +9,7 @@ from collections import deque
 from importlib import resources
 import random
 import re
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -20,7 +21,9 @@ logger = get_logger()
 
 # Question types from original Game-RL
 # Removed module-level QUESTION_TYPES - now defined as class variable
-GAME_RULES = """This is a Snake game. The yellow block is the head of the snake. The blue block is the body of the snake. The red block is the food. The coordinates (x, y) in the grid represent the matrix format, where x is the row index and y is the column index. The origin (0,0) is in the upper left of the grid. You need to control the snake that moves across the grid. Each step it can move up, down, right or left. The game ends if the snake head hits the bound of the grid or its own body."""
+GAME_RULES = dedent("""
+    This is a Snake game. The yellow block is the head of the snake. The blue block is the body of the snake. The red block is the food. The coordinates (x, y) in the grid represent the matrix format, where x is the row index and y is the column index. The origin (0,0) is in the upper left of the grid. You need to control the snake that moves across the grid. Each step it can move up, down, right or left. The game ends if the snake head hits the bound of the grid or its own body.
+""").strip()
 
 QUESTION_PROMPTS = [
     "Where is the head of the snake?",
@@ -30,14 +33,14 @@ QUESTION_PROMPTS = [
     "How long is the shortest path if the snake wants to reach the food? If there is no path, print -1.",
 ]
 
-ANSWER_FORMAT_PROMPT = """
-**Answer Format:**
-- For coordinates: Reply in format (row, col), e.g., (3, 5)
-- For numbers: Reply with only the number, e.g., 7
-- For multiple choice: Reply with only the number (0, 1, 2, or 3)
+ANSWER_FORMAT_PROMPT = dedent("""
+    **Answer Format:**
+    - For coordinates: Reply in format (row, col), e.g., (3, 5)
+    - For numbers: Reply with only the number, e.g., 7
+    - For multiple choice: Reply with only the number (0, 1, 2, or 3)
 
-Do not include any explanation or extra text.
-"""
+    Do not include any explanation or extra text.
+""").strip()
 
 
 class GameRLSnakeQAEnv(Env):

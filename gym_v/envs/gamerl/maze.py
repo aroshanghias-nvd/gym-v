@@ -9,6 +9,7 @@ from collections import deque
 from importlib import resources
 import random
 import re
+from textwrap import dedent
 from typing import Any
 
 import numpy as np
@@ -21,19 +22,21 @@ logger = get_logger()
 
 # Question types from original Game-RL
 # Removed module-level QUESTION_TYPES - now defined as class variable
-GAME_RULES = """**Rules:**
-1. This is a maze mini-game.The player needs to navigate around obstacles to reach the destination and achieve victory.
-2. The red circle represents the player, the green block is the goal and the blue blocks are obstacles.
-3. The player can only move within the white blocks.
-4. The coordinates are given in the format (row, col), where row represents the vertical position and col represents the horizontal position."""
+GAME_RULES = dedent("""
+    **Rules:**
+    1. This is a maze mini-game.The player needs to navigate around obstacles to reach the destination and achieve victory.
+    2. The red circle represents the player, the green block is the goal and the blue blocks are obstacles.
+    3. The player can only move within the white blocks.
+    4. The coordinates are given in the format (row, col), where row represents the vertical position and col represents the horizontal position.
+""").strip()
 
-ANSWER_FORMAT_PROMPT = """
-**Answer Format:**
-- For multiple choice: Reply with only the letter (A, B, C, etc.)
-- For numbers: Reply with only the number
+ANSWER_FORMAT_PROMPT = dedent("""
+    **Answer Format:**
+    - For multiple choice: Reply with only the letter (A, B, C, etc.)
+    - For numbers: Reply with only the number
 
-Do not include any explanation or extra text.
-"""
+    Do not include any explanation or extra text.
+""").strip()
 
 
 class GameRLMazeQAEnv(Env):

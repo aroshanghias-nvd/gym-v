@@ -9,6 +9,7 @@ from collections import deque
 from importlib import resources
 import random
 import re
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -20,48 +21,50 @@ logger = get_logger()
 
 # Question types from original Game-RL
 # Removed module-level QUESTION_TYPES - now defined as class variable
-GAME_RULES = """# Game Overview
-Pac-Man is a maze arcade game where the player controls Pac-Man to eat as many beans as possible while avoiding ghosts. If a ghost catches Pac-Man, the game ends.
+GAME_RULES = dedent("""
+    # Game Overview
+    Pac-Man is a maze arcade game where the player controls Pac-Man to eat as many beans as possible while avoiding ghosts. If a ghost catches Pac-Man, the game ends.
 
-# Basic Elements
-- **Pac-Man**: The yellow circular character that the player controls
-- **Beans**: Yellow dots that Pac-Man can eat to score points
-- **Walls**: Blue barriers that restrict movement
-- **Ghosts**: Two ghosts (Pinky and Blinky) that chase Pac-Man
+    # Basic Elements
+    - **Pac-Man**: The yellow circular character that the player controls
+    - **Beans**: Yellow dots that Pac-Man can eat to score points
+    - **Walls**: Blue barriers that restrict movement
+    - **Ghosts**: Two ghosts (Pinky and Blinky) that chase Pac-Man
 
-# Game Rules
-- Pac-Man must eat beans while avoiding ghosts
-- Each bean eaten adds 1 point to the score
-- The game ends if a ghost catches Pac-Man
-- Movement is restricted by walls
+    # Game Rules
+    - Pac-Man must eat beans while avoiding ghosts
+    - Each bean eaten adds 1 point to the score
+    - The game ends if a ghost catches Pac-Man
+    - Movement is restricted by walls
 
-# Movement and Direction
-- Pac-Man's mouth opening indicates its current direction
-- The direction can be UP, DOWN, LEFT, or RIGHT
-- Neither Pac-Man nor ghosts can move through walls
+    # Movement and Direction
+    - Pac-Man's mouth opening indicates its current direction
+    - The direction can be UP, DOWN, LEFT, or RIGHT
+    - Neither Pac-Man nor ghosts can move through walls
 
-# **Ghost Behavior**
-- **Pinky** (Pink Ghost): Targets up to 4 spaces ahead of Pac-Man's current position and direction (stops at walls)
-- **Blinky** (Red Ghost): Directly targets Pac-Man's current position
-- Both ghosts follow a movement priority system based on the direction they are trying to move:
-  - When moving in more than one direction is optimal, the priority order for both ghosts is **UP > DOWN > LEFT > RIGHT**.
-  - This means if a ghost has multiple possible directions to move in, it will first attempt to move **UP** if possible, then **DOWN**, followed by **LEFT**, and finally **RIGHT** if all other directions are blocked.
+    # **Ghost Behavior**
+    - **Pinky** (Pink Ghost): Targets up to 4 spaces ahead of Pac-Man's current position and direction (stops at walls)
+    - **Blinky** (Red Ghost): Directly targets Pac-Man's current position
+    - Both ghosts follow a movement priority system based on the direction they are trying to move:
+      - When moving in more than one direction is optimal, the priority order for both ghosts is **UP > DOWN > LEFT > RIGHT**.
+      - This means if a ghost has multiple possible directions to move in, it will first attempt to move **UP** if possible, then **DOWN**, followed by **LEFT**, and finally **RIGHT** if all other directions are blocked.
 
-# Board Layout
-- The board is surrounded by walls on all four sides
-- Position (0,0) is located at the top-left corner wall
-- Movement grid uses (row, column) coordinates
+    # Board Layout
+    - The board is surrounded by walls on all four sides
+    - Position (0,0) is located at the top-left corner wall
+    - Movement grid uses (row, column) coordinates
 
-# Scoring
-The score equals the total number of beans eaten by Pac-Man"""
+    # Scoring
+    The score equals the total number of beans eaten by Pac-Man
+""").strip()
 
-ANSWER_FORMAT_PROMPT = """
-**Answer Format:**
-- For multiple choice: Reply with only the letter (A, B, C, etc.)
-- For numbers: Reply with only the number
+ANSWER_FORMAT_PROMPT = dedent("""
+    **Answer Format:**
+    - For multiple choice: Reply with only the letter (A, B, C, etc.)
+    - For numbers: Reply with only the number
 
-Do not include any explanation or extra text.
-"""
+    Do not include any explanation or extra text.
+""").strip()
 
 
 class Ghost:

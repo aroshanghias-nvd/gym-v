@@ -14,6 +14,7 @@ Source: /mnt/petrelfs/gujiawei/jiawei/env-v/Game-RL/src/tictactoe/
 from __future__ import annotations
 
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw
@@ -206,25 +207,26 @@ class TicTacToe:
         return new_game
 
 
-TICTACTOE_RULES = """# TicTacToe Game Rules
+TICTACTOE_RULES = dedent("""
+    # TicTacToe Game Rules
 
-## Basic Setup
-- The game is played on a 3×3 grid
-- Two players: O (red) and X (blue)
-- O always plays first
+    ## Basic Setup
+    - The game is played on a 3×3 grid
+    - Two players: O (red) and X (blue)
+    - O always plays first
 
-## How to Play
-1. Players take turns placing their mark in an empty cell
-2. The first player to get 3 of their marks in a row (horizontally, vertically, or diagonally) wins
-3. If all 9 cells are filled and no player has won, the game is a draw
+    ## How to Play
+    1. Players take turns placing their mark in an empty cell
+    2. The first player to get 3 of their marks in a row (horizontally, vertically, or diagonally) wins
+    3. If all 9 cells are filled and no player has won, the game is a draw
 
-## Strategy Priority (for optimal play)
-1. **Win immediately** - If you can win on this turn, do it
-2. **Block opponent's win** - If opponent can win next turn, block them
-3. **Create double threat** - Make a move that gives you two ways to win
-4. **Block opponent's double threat** - Prevent opponent from creating a double threat
-5. **Choose any available position** - If none of the above apply, pick the first available spot
-"""
+    ## Strategy Priority (for optimal play)
+    1. **Win immediately** - If you can win on this turn, do it
+    2. **Block opponent's win** - If opponent can win next turn, block them
+    3. **Create double threat** - Make a move that gives you two ways to win
+    4. **Block opponent's double threat** - Prevent opponent from creating a double threat
+    5. **Choose any available position** - If none of the above apply, pick the first available spot
+""").strip()
 
 
 class GameRLTicTacToeQAEnv(Env):

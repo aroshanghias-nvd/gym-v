@@ -8,6 +8,7 @@ from __future__ import annotations
 from importlib import resources
 import random
 import re
+from textwrap import dedent
 from typing import Any
 
 import numpy as np
@@ -20,34 +21,36 @@ logger = get_logger()
 
 # Question types from original Game-RL
 # Removed module-level QUESTION_TYPES - now defined as class variable
-GAME_RULES = """Rules:
-1. The image shows a standard Tetris grid with {rows} rows and {cols} columns.
-2. The top row of the grid is labeled as Row 0 according to the coordinates.
-3. Row coordinates increment from top to bottom in the grid from 0 to {max_row}.
-4. In the image, empty cells are painted white and a cell is painted grey if in previous moves a tetromino was placed here. Besides, a cell is painted red if a falling active tetromino is here.
+GAME_RULES = dedent("""
+    Rules:
+    1. The image shows a standard Tetris grid with {rows} rows and {cols} columns.
+    2. The top row of the grid is labeled as Row 0 according to the coordinates.
+    3. Row coordinates increment from top to bottom in the grid from 0 to {max_row}.
+    4. In the image, empty cells are painted white and a cell is painted grey if in previous moves a tetromino was placed here. Besides, a cell is painted red if a falling active tetromino is here.
 
-In Tetris, a Tetrimino is a geometric shape composed of four square blocks. There are seven types of Tetriminos represented by the letters I, O, T, L, J, S, and Z:
-- I: A straight line of 4 blocks.
-- O: A square shape composed of 4 blocks arranged in a 2x2 square.
-- T: A T-shape made up of 4 blocks, with one block in the center and the other three forming a horizontal row above it.
-- L: An L-shape made of 4 blocks, with 3 blocks forming a vertical line and 1 block extending right at the bottom, forming an 'L'.
-- J: A J-shape made of 4 blocks, similar to the L-shape but mirrored.
-- S: An S-shape made of 4 blocks arranged in two stacked rows, each row having two blocks arranged diagonally.
-- Z: A Z-shape made of 4 blocks arranged similarly to the S-shape, but mirrored.
+    In Tetris, a Tetrimino is a geometric shape composed of four square blocks. There are seven types of Tetriminos represented by the letters I, O, T, L, J, S, and Z:
+    - I: A straight line of 4 blocks.
+    - O: A square shape composed of 4 blocks arranged in a 2x2 square.
+    - T: A T-shape made up of 4 blocks, with one block in the center and the other three forming a horizontal row above it.
+    - L: An L-shape made of 4 blocks, with 3 blocks forming a vertical line and 1 block extending right at the bottom, forming an 'L'.
+    - J: A J-shape made of 4 blocks, similar to the L-shape but mirrored.
+    - S: An S-shape made of 4 blocks arranged in two stacked rows, each row having two blocks arranged diagonally.
+    - Z: A Z-shape made of 4 blocks arranged similarly to the S-shape, but mirrored.
 
-Game Rules:
-1. Tetrominoes can be moved left/right and rotated as they fall.
-2. When a Tetromino lands, it becomes fixed in place.
-3. When a horizontal row is completely filled, it gets cleared.
-4. The game ends when pieces stack up to the top of the grid."""
+    Game Rules:
+    1. Tetrominoes can be moved left/right and rotated as they fall.
+    2. When a Tetromino lands, it becomes fixed in place.
+    3. When a horizontal row is completely filled, it gets cleared.
+    4. The game ends when pieces stack up to the top of the grid.
+""").strip()
 
-ANSWER_FORMAT_PROMPT = """
-**Answer Format:**
-- For numbers: Reply with only the number (e.g., 5 or -1)
-- For shape identification: Reply with only the number (1-8)
+ANSWER_FORMAT_PROMPT = dedent("""
+    **Answer Format:**
+    - For numbers: Reply with only the number (e.g., 5 or -1)
+    - For shape identification: Reply with only the number (1-8)
 
-Do not include any explanation or extra text.
-"""
+    Do not include any explanation or extra text.
+""").strip()
 
 
 class GameRLTetrisQAEnv(Env):

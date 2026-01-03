@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -185,8 +186,8 @@ class Card:
 # Spider Solitaire QA Environment
 # ============================================================================
 
-SPIDER_RULES = """
-Spider Solitaire
+SPIDER_RULES = dedent("""
+    Spider Solitaire
 
 # OBJECTIVE
 Spider is played with eight decks of 13 spade cards each, totaling 104 unique cards. The goal is to arrange all cards in a King-to-Ace sequence in the same suit and move them to the foundation piles. Once all sequences are moved to the foundations, the game is won.
@@ -246,7 +247,7 @@ In **circular spider solitaire**, a King can be placed on an Ace, allowing for e
 - **Waste Pile Numbering**: Waste piles are numbered from **left to right** starting with `0` for the leftmost pile.
 - **Card Numbering within Waste Piles**: The **bottom-most card** of each pile (usually face-down) is numbered **0**, and the cards above it are numbered **1**, **2**, **3**, etc., moving upwards in the pile.
 - **Please Pay Attention** to both the waste pile and card numbering methods, as they will help you navigate and make strategic decisions effectively.
-"""
+""").strip()
 
 
 class GameRLSpiderSolitaireQAEnv(Env):

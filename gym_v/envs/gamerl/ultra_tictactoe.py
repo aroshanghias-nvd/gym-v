@@ -17,19 +17,21 @@ Source: /mnt/petrelfs/gujiawei/jiawei/env-v/Game-RL/src/ultra_tictactoe/
 from __future__ import annotations
 
 import random
+from textwrap import dedent
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation
 
-GAME_RULES = """Now I'll give you a picture, which shows a screenshot of Ultra TicTacToe. The introduction of Ultra TicTacToe is as follows:
+GAME_RULES = dedent("""
+    Now I'll give you a picture, which shows a screenshot of Ultra TicTacToe. The introduction of Ultra TicTacToe is as follows:
 1. Board and coordinate representation: In this game, the board is divided into 9 3*3 squares(called Nine-grids). At the same time, we use $(i, j, row, col)$ to represent the coordinates of a cell: $(i, j)$ represents the coordinates of the Nine-grid; $(row, col)$ represents the coordinate of the cell within the Nine-grid; $i, j, row, col$ all range from 1 to 3. Two players take turns placing pieces on the board to mark the cells on the board, with the first player using "X" and the second player using "O" (this is the same as traditional TicTacToe).
 2. Rules for placing chess pieces: After the game starts, the first player places a chess piece in any cell in the Nine-grid in the middle (i.e., the Nine-grid (2, 2)). After that, the coordinates of each chess piece placed in the Nine-grid are the same as the coordinates of the Nine-grid in which the opponent's last chess piece was placed; for example, if the first player places a chess piece at the coordinates (2, 2, 3, 1) in the first step, then the second player needs to choose a chess piece in the nine-square grid (3, 1) in the second step.
 3. Scoring rules: For each player, each "Straight" (i.e., three identical chess pieces connected in a line, such as in the same row, the same column, or a diagonal line) in each Nine-grid is counted as 1 point. More than 1 point can be counted in each Nine-grid.
 
 Now I will give you a question about the game. Please extract information from the picture I give you, think carefully, reason, and answer:
-"""
+""").strip()
 
 
 class UTTTGameGrid:
