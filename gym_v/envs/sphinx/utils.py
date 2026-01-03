@@ -809,7 +809,7 @@ def _icon_nested(
     line_width: int,
     icon_color: tuple[int, int, int],
 ) -> Image.Image:
-    """Nested layered icon."""
+    """Nested layered icon with asymmetric marker."""
     img = Image.new("RGB", (img_size, img_size), (255, 255, 255))
     draw = ImageDraw.Draw(img)
 
@@ -817,7 +817,8 @@ def _icon_nested(
     colors = [icon_color, (255, 220, 0), (46, 204, 64)]
     scales = [1.0, 0.65, 0.35]
 
-    shape_type = int(rng.integers(0, 3))
+    # Only use non-symmetric shapes (rectangle and triangle, skip circle)
+    shape_type = int(rng.integers(0, 2))  # 0=rectangle, 1=triangle
 
     for scale, color in zip(scales, colors, strict=True):
         m = margin + (1 - scale) * (img_size - 2 * margin) / 2
@@ -828,15 +829,20 @@ def _icon_nested(
             draw.rectangle(
                 [x1, y1, x2, y2], fill=color, outline=(40, 40, 40), width=line_width
             )
-        elif shape_type == 1:
-            draw.ellipse(
-                [x1, y1, x2, y2], fill=color, outline=(40, 40, 40), width=line_width
-            )
         else:
-            # Triangle
+            # Triangle (asymmetric)
             cx = img_size / 2
             points = [(cx, y1), (x2, y2), (x1, y2)]
             draw.polygon(points, fill=color, outline=(40, 40, 40), width=line_width)
+
+    # Add asymmetric corner marker to break any remaining symmetry
+    marker_x = margin + img_size * 0.1
+    marker_y = margin + img_size * 0.1
+    marker_size = int(img_size * 0.06)
+    draw.ellipse(
+        [marker_x, marker_y, marker_x + marker_size, marker_y + marker_size],
+        fill=(60, 60, 60),
+    )
 
     return img
 
@@ -905,16 +911,34 @@ def _icon_complex(
             points, fill=(255, 200, 100), outline=(40, 40, 40), width=line_width
         )
     else:
-        # Compound: overlapping shapes
+        # Compound: overlapping shapes with asymmetric offset
         colors = [(255, 65, 54), (0, 116, 217), (46, 204, 64)]
         for i in range(3):
-            offset = i * 15
-            m = img_size * 0.15 + offset
-            x2 = img_size - m
-            if x2 > m:  # Ensure valid rectangle
+            # Use asymmetric offsets to break symmetry
+            x_off = i * 20
+            y_off = i * 12  # Different from x to break symmetry
+            m = img_size * 0.2
+            x1, y1 = m + x_off, m + y_off
+            size = img_size * 0.45 - i * 15
+            if size > 20:
                 draw.ellipse(
-                    [m, m, x2, x2], fill=colors[i], outline=(40, 40, 40), width=2
+                    [x1, y1, x1 + size, y1 + size],
+                    fill=colors[i],
+                    outline=(40, 40, 40),
+                    width=2,
                 )
+
+    # Add corner marker for extra asymmetry on all icon types
+    marker_size = int(img_size * 0.05)
+    draw.ellipse(
+        [
+            img_size * 0.08,
+            img_size * 0.08,
+            img_size * 0.08 + marker_size,
+            img_size * 0.08 + marker_size,
+        ],
+        fill=(60, 60, 60),
+    )
 
     return img
 
@@ -1500,6 +1524,84 @@ def compose_symmetry_fill_8_options(
     return canvas
 
 
+def _images_are_similar(
+    img1: Image.Image, img2: Image.Image, threshold: float = 10.0
+) -> bool:
+    """Check if two images are visually similar.
+
+    Args:
+        img1: First image
+        img2: Second image
+        threshold: Mean absolute difference threshold (lower = more similar)
+
+    Returns:
+        True if images are similar, False otherwise
+    """
+    import numpy as np
+
+    size = (100, 100)
+    arr1 = np.array(img1.resize(size))
+    arr2 = np.array(img2.resize(size))
+
+    if arr1.shape != arr2.shape:
+        return False
+
+    diff = np.mean(np.abs(arr1.astype(float) - arr2.astype(float)))
+    return diff < threshold
+
+
+def _add_asymmetric_marker(
+    img: Image.Image,
+    rng: Any,
+    marker_size: int = 8,
+) -> Image.Image:
+    """Add a small asymmetric marker to ensure image is not rotationally symmetric.
+
+    Args:
+        img: Input image
+        rng: Random number generator
+        marker_size: Size of the marker
+
+    Returns:
+        Image with asymmetric marker added
+    """
+    img_copy = img.copy()
+    draw = ImageDraw.Draw(img_copy)
+
+    # Add a small colored dot in a random corner region (but not center)
+    w, h = img_copy.size
+    margin = int(w * 0.15)
+
+    # Choose one of the corner regions randomly
+    corner = int(rng.integers(0, 4))
+    if corner == 0:  # Top-left
+        x = margin + int(rng.integers(0, margin))
+        y = margin + int(rng.integers(0, margin))
+    elif corner == 1:  # Top-right
+        x = w - margin - int(rng.integers(0, margin))
+        y = margin + int(rng.integers(0, margin))
+    elif corner == 2:  # Bottom-left
+        x = margin + int(rng.integers(0, margin))
+        y = h - margin - int(rng.integers(0, margin))
+    else:  # Bottom-right
+        x = w - margin - int(rng.integers(0, margin))
+        y = h - margin - int(rng.integers(0, margin))
+
+    # Draw a small filled circle as marker
+    marker_color = (80, 80, 80)
+    draw.ellipse(
+        [
+            x - marker_size // 2,
+            y - marker_size // 2,
+            x + marker_size // 2,
+            y + marker_size // 2,
+        ],
+        fill=marker_color,
+    )
+
+    return img_copy
+
+
 def generate_extra_distractors(
     correct_option: Image.Image,
     original_options: list[Image.Image],
@@ -1507,6 +1609,9 @@ def generate_extra_distractors(
     num_extra: int = 4,
 ) -> list[Image.Image]:
     """Generate additional distractor options by applying transforms to the correct answer.
+
+    Ensures no duplicate options by checking similarity against both original options
+    and already-generated distractors.
 
     Args:
         correct_option: The correct answer option image
@@ -1517,7 +1622,8 @@ def generate_extra_distractors(
     Returns:
         List of extra distractor images
     """
-    import numpy as np
+    # All images to compare against (original options + distractors we generate)
+    all_existing = list(original_options)
 
     # Apply all transforms to the correct option
     all_transforms = list(TRANSFORMS)
@@ -1528,30 +1634,49 @@ def generate_extra_distractors(
         if len(distractors) >= num_extra:
             break
 
+        # Skip identity transform (would be same as correct answer)
+        if transform == "identity":
+            continue
+
         transformed = apply_transform(correct_option, transform)
 
-        # Check if this transform is too similar to any original option
-        # by computing mean absolute difference
-        is_similar = False
-        for orig in original_options:
-            # Resize to same size for comparison
-            size = (100, 100)
-            t_arr = np.array(transformed.resize(size))
-            o_arr = np.array(orig.resize(size))
+        # Check if this transform is too similar to any existing option
+        is_duplicate = any(
+            _images_are_similar(transformed, existing) for existing in all_existing
+        )
 
-            if t_arr.shape == o_arr.shape:
-                diff = np.mean(np.abs(t_arr.astype(float) - o_arr.astype(float)))
-                if diff < 10:  # Very similar
-                    is_similar = True
-                    break
-
-        if not is_similar:
+        if not is_duplicate:
             distractors.append(transformed)
+            all_existing.append(transformed)
 
-    # If we don't have enough, add more with slight variations
+    # If we still don't have enough (due to symmetric shapes), generate variants
+    # by applying transforms to OTHER original options
+    if len(distractors) < num_extra:
+        for orig in original_options:
+            if len(distractors) >= num_extra:
+                break
+            for transform in all_transforms:
+                if len(distractors) >= num_extra:
+                    break
+                if transform == "identity":
+                    continue
+
+                transformed = apply_transform(orig, transform)
+                is_duplicate = any(
+                    _images_are_similar(transformed, existing)
+                    for existing in all_existing
+                )
+
+                if not is_duplicate:
+                    distractors.append(transformed)
+                    all_existing.append(transformed)
+
+    # Last resort: add markers to make unique versions
     while len(distractors) < num_extra:
-        # Just add transformed versions even if similar
-        transform = rng.choice(all_transforms)
-        distractors.append(apply_transform(correct_option, transform))
+        # Create a variation by adding asymmetric marker to a transform
+        transform = all_transforms[len(distractors) % len(all_transforms)]
+        transformed = apply_transform(correct_option, transform)
+        marked = _add_asymmetric_marker(transformed, rng)
+        distractors.append(marked)
 
     return distractors[:num_extra]
