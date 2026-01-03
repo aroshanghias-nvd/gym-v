@@ -995,6 +995,59 @@ register(
     ),
 )
 
+# Sphinx environments (procedurally generated) - Grid style (ARC-like)
+register(
+    id="Sphinx/TransformResult-v0",
+    entry_point="gym_v.envs.sphinx.transform_result:SphinxTransformResultEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        grid_size=5,  # Grid size for difficulty control
+        num_colors=4,  # Number of colors
+        cell_size=40,  # Pixel size per cell
+        option_size=280,
+        padding=20,
+    ),
+)
+
+register(
+    id="Sphinx/SymmetryFill-v0",
+    entry_point="gym_v.envs.sphinx.symmetry_fill:SphinxSymmetryFillEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        cell_grid_size=4,  # Grid size within each cell for difficulty control
+        num_colors=3,  # Number of colors
+        cell_size=100,  # Pixel size per cell
+        option_size=200,
+        padding=15,
+    ),
+)
+
+# Sphinx environments (procedurally generated) - Polygon/Icon style (original Sphinx-like)
+register(
+    id="Sphinx/TransformResultPoly-v0",
+    entry_point="gym_v.envs.sphinx.transform_result_poly:SphinxTransformResultPolyEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=300,  # Size of shape image
+        num_points=8,  # Number of polygon vertices (controls complexity)
+        line_width=3,  # Line width
+        grid_divisions=8,  # Grid background divisions
+        option_size=280,
+        padding=20,
+    ),
+)
+
+register(
+    id="Sphinx/SymmetryFillPoly-v0",
+    entry_point="gym_v.envs.sphinx.symmetry_fill_poly:SphinxSymmetryFillPolyEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        cell_size=200,  # Size of each icon
+        line_width=4,  # Line width
+        option_size=200,
+        padding=15,
+    ),
+
 # Perception environments
 register(
     id="Perception/ChartToTable-v0",
