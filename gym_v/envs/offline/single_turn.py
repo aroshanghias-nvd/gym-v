@@ -7,10 +7,9 @@ from typing import Any
 from PIL import Image
 
 from gym_v import Env, Observation, get_logger
-
-from .grader import GRADER_REGISTRY
-from .sampler import IndexSampler
-from .source import DATASOURCE_REGISTRY, DataSource, OfflineSample
+from gym_v.envs.offline.grader import GRADER_REGISTRY
+from gym_v.envs.offline.sampler import IndexSampler
+from gym_v.envs.offline.source import DATASOURCE_REGISTRY, DataSource, OfflineSample
 
 logger = get_logger()
 

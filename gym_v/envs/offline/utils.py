@@ -1,8 +1,25 @@
 import base64
 import io
+import json
 import re
 
 from PIL import Image
+
+from gym_v.logger import get_logger
+
+logger = get_logger()
+
+
+try:
+    import orjson
+
+    def fast_json_loads(s: str) -> dict:
+        return orjson.loads(s)
+except ImportError:
+    logger.warning("orjson not installed, falling back to native json")
+
+    def fast_json_loads(s: str) -> dict:
+        return json.loads(s)
 
 
 def normalize_em(s: str) -> str:

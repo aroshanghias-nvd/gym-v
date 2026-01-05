@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from .utils import normalize_em
+from gym_v.envs.offline.utils import normalize_em
 
 
 def exact_match(action: str | None, answer: str | None) -> tuple[float, dict[str, Any]]:
