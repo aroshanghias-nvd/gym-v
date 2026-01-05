@@ -75,6 +75,7 @@ class GameRLWordSearchQAEnv(Env):
         },
     ]
 
+    gamerl_assets_dir = resources.files("gym_v.envs.gamerl") / "assets"
     assets_dir = resources.files("gym_v.envs") / "assets"
 
     # 8 directions for word placement
@@ -104,7 +105,7 @@ class GameRLWordSearchQAEnv(Env):
 
         # Load word list
         try:
-            with open(self.assets_dir / "words.txt") as f:
+            with open(self.gamerl_assets_dir / "words.txt") as f:
                 self._words = [word.strip().upper() for word in f if word.strip()]
         except FileNotFoundError:
             # Fallback to a small word list

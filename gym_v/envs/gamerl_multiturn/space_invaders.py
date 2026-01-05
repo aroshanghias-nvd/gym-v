@@ -38,6 +38,7 @@ class GameRLSpaceInvadersEnv(Env):
         cell_height: Height of each cell in pixels (default 40)
     """
 
+    gamerl_assets_dir = resources.files("gym_v.envs.gamerl") / "assets"
     assets_dir = resources.files("gym_v.envs") / "assets"
 
     # Colors
@@ -91,7 +92,7 @@ class GameRLSpaceInvadersEnv(Env):
 
     def _load_image(self, filename: str, width: int, height: int) -> Image.Image | None:
         """Load and scale an image from assets."""
-        image_path = self.assets_dir / filename
+        image_path = self.gamerl_assets_dir / filename
         try:
             if image_path.is_file():
                 img = Image.open(str(image_path))

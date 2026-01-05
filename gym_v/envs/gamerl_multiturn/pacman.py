@@ -61,6 +61,7 @@ class GameRLPacmanEnv(Env):
         cell_size: Size of each cell in pixels for rendering (default 25)
     """
 
+    gamerl_assets_dir = resources.files("gym_v.envs.gamerl") / "assets"
     assets_dir = resources.files("gym_v.envs") / "assets"
 
     # Direction mappings
@@ -125,7 +126,7 @@ class GameRLPacmanEnv(Env):
 
     def _load_image(self, filename: str) -> Image.Image | None:
         """Load and scale an image from assets."""
-        image_path = self.assets_dir / filename
+        image_path = self.gamerl_assets_dir / filename
         try:
             if image_path.is_file():
                 img = Image.open(str(image_path))

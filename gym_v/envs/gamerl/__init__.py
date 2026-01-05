@@ -1,4 +1,3 @@
-# Game-RL Q&A environments (single-turn)
 from gym_v.envs.gamerl.chess_ranger import GameRLChessRangerQAEnv
 from gym_v.envs.gamerl.freecell import GameRLFreecellQAEnv
 from gym_v.envs.gamerl.hue import GameRLHueQAEnv
