@@ -10,7 +10,8 @@ from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from gym_v.logger import get_logger
-from gym_v.utils import RecordConstructorArgs, np_random
+from gym_v.utils.record_constructor import RecordConstructorArgs
+from gym_v.utils.seeding import np_random
 
 if TYPE_CHECKING:
     from gym_v.envs.registration import EnvSpec, WrapperSpec
