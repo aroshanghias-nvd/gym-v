@@ -1046,6 +1046,61 @@ register(
         option_size=200,
         padding=15,
     ),
+register(
+    id="Sphinx/OddOneOut-v0",
+    entry_point="gym_v.envs.sphinx.odd_one_out:SphinxOddOneOutEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        grid_size=5,
+        num_colors=4,
+        cell_size=40,
+        option_size=200,
+        padding=15,
+    ),
+)
+
+register(
+    id="Sphinx/OddOneOutPoly-v0",
+    entry_point="gym_v.envs.sphinx.odd_one_out:SphinxOddOneOutPolyEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=200,
+        num_points=8,
+        line_width=3,
+        grid_divisions=8,
+        option_size=200,
+        padding=15,
+    ),
+)
+
+register(
+    id="Sphinx/SequenceCompletion-v0",
+    entry_point="gym_v.envs.sphinx.sequence_completion:SphinxSequenceCompletionEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        grid_size=4,
+        num_colors=3,
+        cell_size=35,
+        sequence_length=4,
+        option_size=150,
+        padding=10,
+    ),
+)
+
+register(
+    id="Sphinx/SequenceCompletionPoly-v0",
+    entry_point="gym_v.envs.sphinx.sequence_completion:SphinxSequenceCompletionPolyEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=200,
+        num_points=6,
+        line_width=3,
+        grid_divisions=8,
+        sequence_length=4,
+        option_size=150,
+        padding=10,
+    ),
+)
 
 # Perception environments
 register(

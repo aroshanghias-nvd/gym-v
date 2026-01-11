@@ -1680,3 +1680,191 @@ def generate_extra_distractors(
         distractors.append(marked)
 
     return distractors[:num_extra]
+
+
+# Sequence patterns for SequenceCompletion task
+SEQUENCE_PATTERNS = {
+    "rot90_sequence": ["identity", "rot90_cw", "rot180", "rot90_ccw"],
+    "flip_h_sequence": ["identity", "flip_h"],
+    "flip_v_sequence": ["identity", "flip_v"],
+    "rot180_sequence": ["identity", "rot180"],
+    "diagonal_flip": ["identity", "flip_diag", "rot180", "flip_antidiag"],
+}
+
+
+def compose_odd_one_out_8_options(
+    options: list[Image.Image],
+    odd_idx: int,
+    option_size: int = 200,
+    padding: int = 15,
+    label_height: int = 40,
+) -> Image.Image:
+    """Compose 8 options in 2x4 layout for OddOneOut task (no original at top).
+
+    Args:
+        options: List of 8 option images
+        odd_idx: Index of the odd one out (for reference, not displayed)
+        option_size: Size of each option box
+        padding: Padding between elements
+        label_height: Height reserved for labels
+
+    Returns:
+        Composed image with 8 options in 2x4 grid
+    """
+    if len(options) != 8:
+        raise ValueError(f"Expected 8 options, got {len(options)}")
+
+    cols, rows = 4, 2
+    total_width = cols * option_size + (cols + 1) * padding
+    total_height = rows * (option_size + label_height) + (rows + 1) * padding
+
+    canvas = Image.new("RGB", (total_width, total_height), (255, 255, 255))
+    draw = ImageDraw.Draw(canvas)
+
+    assets_dir = resources.files("gym_v.envs") / "assets"
+    font_path = assets_dir / "DejaVuSans.ttf"
+    try:
+        font = ImageFont.truetype(str(font_path), 28)
+    except Exception:
+        font = ImageFont.load_default()
+
+    labels = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)"]
+
+    for i, opt in enumerate(options):
+        row = i // cols
+        col = i % cols
+
+        x = padding + col * (option_size + padding)
+        y = padding + row * (option_size + label_height + padding)
+
+        opt_resized = opt.resize((option_size, option_size), Image.Resampling.LANCZOS)
+
+        draw.rectangle(
+            [x - 2, y - 2, x + option_size + 2, y + option_size + 2],
+            outline=(0, 0, 0),
+            width=2,
+        )
+        canvas.paste(opt_resized, (x, y))
+
+        label = labels[i]
+        bbox = draw.textbbox((0, 0), label, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_x = x + (option_size - text_width) // 2
+        text_y = y + option_size + 5
+        draw.text((text_x, text_y), label, fill=(0, 0, 0), font=font)
+
+    return canvas
+
+
+def compose_sequence_completion_image(
+    sequence: list[Image.Image],
+    options: list[Image.Image],
+    correct_idx: int,
+    option_size: int = 150,
+    padding: int = 10,
+    label_height: int = 35,
+) -> Image.Image:
+    """Compose image with sequence at top and 8 options below.
+
+    Layout:
+    - Top row: Sequence items followed by "?" placeholder
+    - Bottom: 2x4 grid of options (a)-(h)
+
+    Args:
+        sequence: List of sequence images (shown items)
+        options: List of 8 option images
+        correct_idx: Index of the correct answer
+        option_size: Size of each option/sequence box
+        padding: Padding between elements
+        label_height: Height reserved for labels
+
+    Returns:
+        Composed image with sequence and options
+    """
+    if len(options) != 8:
+        raise ValueError(f"Expected 8 options, got {len(options)}")
+
+    cols, rows = 4, 2
+    sequence_count = len(sequence) + 1  # +1 for "?" placeholder
+
+    # Calculate dimensions
+    sequence_width = sequence_count * option_size + (sequence_count + 1) * padding
+    options_width = cols * option_size + (cols + 1) * padding
+    total_width = max(sequence_width, options_width)
+
+    sequence_height = option_size + padding * 2
+    options_height = rows * (option_size + label_height) + (rows + 1) * padding
+    total_height = sequence_height + options_height
+
+    canvas = Image.new("RGB", (total_width, total_height), (255, 255, 255))
+    draw = ImageDraw.Draw(canvas)
+
+    assets_dir = resources.files("gym_v.envs") / "assets"
+    font_path = assets_dir / "DejaVuSans.ttf"
+    try:
+        font = ImageFont.truetype(str(font_path), 28)
+        large_font = ImageFont.truetype(str(font_path), 48)
+    except Exception:
+        font = ImageFont.load_default()
+        large_font = font
+
+    # Draw sequence at top (centered)
+    seq_start_x = (total_width - sequence_width) // 2 + padding
+    seq_y = padding
+
+    for i, seq_img in enumerate(sequence):
+        x = seq_start_x + i * (option_size + padding)
+        seq_resized = seq_img.resize(
+            (option_size, option_size), Image.Resampling.LANCZOS
+        )
+        draw.rectangle(
+            [x - 2, seq_y - 2, x + option_size + 2, seq_y + option_size + 2],
+            outline=(0, 0, 0),
+            width=2,
+        )
+        canvas.paste(seq_resized, (x, seq_y))
+
+    # Draw "?" placeholder
+    q_x = seq_start_x + len(sequence) * (option_size + padding)
+    draw.rectangle(
+        [q_x - 2, seq_y - 2, q_x + option_size + 2, seq_y + option_size + 2],
+        outline=(100, 100, 100),
+        width=2,
+    )
+    # Draw "?" in center
+    q_bbox = draw.textbbox((0, 0), "?", font=large_font)
+    q_text_w = q_bbox[2] - q_bbox[0]
+    q_text_h = q_bbox[3] - q_bbox[1]
+    q_text_x = q_x + (option_size - q_text_w) // 2
+    q_text_y = seq_y + (option_size - q_text_h) // 2
+    draw.text((q_text_x, q_text_y), "?", fill=(100, 100, 100), font=large_font)
+
+    # Draw 8 options below
+    labels = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)"]
+    options_start_x = (total_width - options_width) // 2 + padding
+    options_start_y = sequence_height
+
+    for i, opt in enumerate(options):
+        row = i // cols
+        col = i % cols
+
+        x = options_start_x + col * (option_size + padding)
+        y = options_start_y + padding + row * (option_size + label_height + padding)
+
+        opt_resized = opt.resize((option_size, option_size), Image.Resampling.LANCZOS)
+
+        draw.rectangle(
+            [x - 2, y - 2, x + option_size + 2, y + option_size + 2],
+            outline=(0, 0, 0),
+            width=2,
+        )
+        canvas.paste(opt_resized, (x, y))
+
+        label = labels[i]
+        bbox = draw.textbbox((0, 0), label, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_x = x + (option_size - text_width) // 2
+        text_y = y + option_size + 5
+        draw.text((text_x, text_y), label, fill=(0, 0, 0), font=font)
+
+    return canvas

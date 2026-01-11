@@ -20,6 +20,10 @@ SPHINX_ENVS = [
     "Sphinx/TransformResultPoly-v0",
     "Sphinx/SymmetryFill-v0",
     "Sphinx/SymmetryFillPoly-v0",
+    "Sphinx/OddOneOut-v0",
+    "Sphinx/OddOneOutPoly-v0",
+    "Sphinx/SequenceCompletion-v0",
+    "Sphinx/SequenceCompletionPoly-v0",
 ]
 
 

@@ -263,8 +263,7 @@ class SphinxSymmetryFillPolyEnv(SphinxSymmetryFillBaseEnv):
         option_size: Size of each option image in pixels
         padding: Padding between elements in the composed image
         style: Visual style ('simple', 'colored', 'nested', 'complex'),
-               or 'random' for random selection each reset
-        difficulty: Difficulty level 1-4. Higher = more complex icons.
+               or None for random selection each reset
     """
 
     def __init__(
@@ -274,14 +273,12 @@ class SphinxSymmetryFillPolyEnv(SphinxSymmetryFillBaseEnv):
         option_size: int = 200,
         padding: int = 15,
         style: str | None = None,
-        difficulty: int | None = None,
         **kwargs: Any,
     ):
         super().__init__(option_size=option_size, padding=padding, **kwargs)
         self._cell_size = cell_size
         self._line_width = line_width
         self._style = style
-        self._difficulty = difficulty
         self._current_style: str | None = None
 
     def _generate_cells(self) -> tuple[list[Image.Image], int]:
@@ -290,17 +287,9 @@ class SphinxSymmetryFillPolyEnv(SphinxSymmetryFillBaseEnv):
             cell_size=self._cell_size,
             line_width=self._line_width,
             style=self._style,
-            difficulty=self._difficulty,
         )
 
-        if self._style == "random" or (
-            self._style is None and self._difficulty is None
-        ):
-            self._current_style = "random"
-        elif self._style is not None:
-            self._current_style = self._style
-        else:
-            self._current_style = f"difficulty_{self._difficulty}"
+        self._current_style = self._style if self._style else "random"
 
         return cells, hidden_idx
 
