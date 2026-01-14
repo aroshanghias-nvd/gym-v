@@ -11,6 +11,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=64,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -22,6 +23,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=48,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -33,6 +35,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=64,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -44,6 +47,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=32,
         padding=16,
+        num_players=1,
     ),
 )
 
@@ -56,6 +60,7 @@ register(
         peg_width=150,
         peg_height=250,
         padding=40,
+        num_players=1,
     ),
 )
 
@@ -67,6 +72,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=64,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -78,6 +84,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=80,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -89,6 +96,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=64,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -100,6 +108,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=56,
         padding=40,
+        num_players=1,
     ),
 )
 
@@ -111,6 +120,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=36,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -122,6 +132,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=48,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -133,6 +144,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=48,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -144,6 +156,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=40,
         padding=20,
+        num_players=1,
     ),
 )
 
@@ -155,6 +168,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=40,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -166,6 +180,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=36,
         padding=20,
+        num_players=1,
     ),
 )
 
@@ -177,6 +192,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=48,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -188,6 +204,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=8,
         padding=16,
+        num_players=1,
     ),
 )
 
@@ -198,6 +215,7 @@ register(
     kwargs=dict(
         dataset_kwargs=dict(size=500),
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -209,6 +227,7 @@ register(
         dataset_kwargs=dict(size=500),
         cell_px=28,
         padding=24,
+        num_players=1,
     ),
 )
 
