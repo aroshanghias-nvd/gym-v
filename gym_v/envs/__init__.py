@@ -606,6 +606,7 @@ register(
         max_n_m=4,
         cell_px=56,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -617,6 +618,7 @@ register(
         n=3,
         cell_px=52,
         padding=28,
+        num_players=1,
     ),
 )
 
@@ -630,6 +632,7 @@ register(
         black_cell_density_range=(0.6, 0.95),
         cell_px=48,
         padding=24,
+        num_players=1,
     ),
 )
 
