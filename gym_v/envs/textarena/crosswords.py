@@ -33,12 +33,15 @@ class TextArenaCrosswordsEnv(Env):
         hardcore: bool = False,
         num_words: int = 5,
         cell_size: int = 48,
+        num_players: int = 1,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self._hardcore = hardcore
         self._num_words = num_words
         self._cell_size = cell_size
+        self.num_players = num_players
+        self._agent_ids = {f"agent_{i}" for i in range(num_players)}
 
         self._ta_env = ta.make(
             "Crosswords-v0-raw",
@@ -61,14 +64,16 @@ class TextArenaCrosswordsEnv(Env):
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
 
-        self._ta_env.reset(num_players=1, seed=seed)
+        self._ta_env.reset(num_players=self.num_players, seed=seed)
 
         logger.info("Reset Crosswords.")
 
         obs = Observation(image=self.render(), text=self._get_observation_text())
         info = {}
 
-        return {"agent_0": obs}, {"agent_0": info}
+        return {agent_id: obs for agent_id in self._agent_ids}, {
+            agent_id: info for agent_id in self._agent_ids
+        }
 
     def inner_step(
         self, action: dict[str, str]
@@ -79,7 +84,8 @@ class TextArenaCrosswordsEnv(Env):
         dict[str, bool],
         dict[str, Any],
     ]:
-        action_str = action["agent_0"]
+        agent_id = next(iter(self._agent_ids))
+        action_str = action[agent_id]
         info = {}
         done, _ = self._ta_env.step(action_str)
 
@@ -100,11 +106,17 @@ class TextArenaCrosswordsEnv(Env):
         obs = Observation(image=self.render(), text=self._get_observation_text())
 
         return (
-            {"agent_0": obs},
-            {"agent_0": reward},
-            {"agent_0": terminated, "__all__": terminated},
-            {"agent_0": truncated, "__all__": truncated},
-            {"agent_0": info},
+            {agent_id: obs for agent_id in self._agent_ids},
+            {agent_id: reward for agent_id in self._agent_ids},
+            {
+                **{agent_id: terminated for agent_id in self._agent_ids},
+                "__all__": terminated,
+            },
+            {
+                **{agent_id: truncated for agent_id in self._agent_ids},
+                "__all__": truncated,
+            },
+            {agent_id: info for agent_id in self._agent_ids},
         )
 
     def render(self) -> Image.Image | list[Image.Image] | None:

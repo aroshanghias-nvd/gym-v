@@ -221,6 +221,7 @@ register(
         hardcore=False,
         num_words=5,
         cell_size=48,
+        num_players=1,
     ),
 )
 
@@ -230,6 +231,7 @@ register(
     max_episode_steps=100,
     kwargs=dict(
         tile_size=80,
+        num_players=1,
     ),
 )
 
@@ -242,6 +244,7 @@ register(
         num_holes=3,
         randomize_start_goal=False,
         tile_size=64,
+        num_players=1,
     ),
 )
 
@@ -252,6 +255,7 @@ register(
     kwargs=dict(
         target_tile=2048,
         tile_size=100,
+        num_players=1,
     ),
 )
 
@@ -262,6 +266,7 @@ register(
     kwargs=dict(
         size=5,
         cell_size=80,
+        num_players=1,
     ),
 )
 
@@ -274,6 +279,7 @@ register(
         cols=8,
         num_mines=10,
         cell_size=64,
+        num_players=1,
     ),
 )
 
@@ -284,6 +290,7 @@ register(
     kwargs=dict(
         initial_empty=1,
         peg_size=80,
+        num_players=1,
     ),
 )
 
@@ -294,6 +301,7 @@ register(
     kwargs=dict(
         difficulty="easy",
         cell_size=80,
+        num_players=1,
     ),
 )
 
@@ -305,6 +313,7 @@ register(
         dim_room=(6, 6),
         num_boxes=3,
         tile_size=48,
+        num_players=1,
     ),
 )
 
@@ -315,6 +324,7 @@ register(
     kwargs=dict(
         clues=30,
         cell_size=50,
+        num_players=1,
     ),
 )
 
@@ -324,6 +334,7 @@ register(
     max_episode_steps=100,
     kwargs=dict(
         num_disks=3,
+        num_players=1,
     ),
 )
 
@@ -336,6 +347,7 @@ register(
         num_guesses=6,
         hardcore=False,
         cell_size=60,
+        num_players=1,
     ),
 )
 
@@ -346,6 +358,7 @@ register(
     kwargs=dict(
         hardcore=False,
         cell_size=60,
+        num_players=1,
     ),
 )
 
