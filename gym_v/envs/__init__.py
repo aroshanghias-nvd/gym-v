@@ -416,6 +416,7 @@ register(
         num_hints=12,
         cell_px=60,
         padding=24,
+        num_players=1,
     ),
 )
 
@@ -428,6 +429,7 @@ register(
         num_hints=0,
         cell_px=60,
         padding=50,
+        num_players=1,
     ),
 )
 
@@ -440,6 +442,7 @@ register(
         num_hints=0,
         cell_px=60,
         padding=50,
+        num_players=1,
     ),
 )
 
@@ -452,6 +455,7 @@ register(
         num_hints=0,
         cell_px=55,
         padding=50,
+        num_players=1,
     ),
 )
 
@@ -463,6 +467,7 @@ register(
         size=9,
         cell_px=50,
         padding=30,
+        num_players=1,
     ),
 )
 
@@ -474,6 +479,7 @@ register(
         size=5,
         cell_px=60,
         padding=30,
+        num_players=1,
     ),
 )
 
@@ -485,6 +491,7 @@ register(
         size=6,
         cell_px=50,
         padding=20,
+        num_players=1,
     ),
 )
 
@@ -497,6 +504,7 @@ register(
         stars_per_group=1,
         cell_px=50,
         padding=20,
+        num_players=1,
     ),
 )
 register(
