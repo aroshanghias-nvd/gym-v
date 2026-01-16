@@ -133,8 +133,7 @@ class PerceptionChartToTableEnv(Env):
     def inner_step(
         self, action: str
     ) -> tuple[Observation, float, bool, bool, dict[str, Any]]:
-        # Reward calculation would ideally parse the JSON and compare values
-        reward = 0.0
+        reward = self._compute_reward(action)
 
         info = {"oracle_answer": str(self._current_data)}
 
@@ -145,6 +144,23 @@ class PerceptionChartToTableEnv(Env):
             False,
             info,
         )
+
+    def _compute_reward(self, action: str) -> float:
+        """Compute reward by comparing action with oracle answer."""
+        try:
+            # Try to parse the action as Python dict or JSON
+            try:
+                parsed_action = eval(action)
+            except:
+                import json
+                parsed_action = json.loads(action)
+
+            # Compare with oracle data
+            if parsed_action == self._current_data:
+                return 1.0
+            return 0.0
+        except:
+            return 0.0
 
     def render(self) -> Image.Image:
         return self._current_image
