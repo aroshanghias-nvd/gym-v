@@ -358,6 +358,18 @@ register(
 )
 
 register(
+    id="TextArena/Othello-v0",
+    entry_point="gym_v.envs.multi_players.textarena.othello:TextArenaOthello",
+    max_episode_steps=100,
+    kwargs=dict(
+        board_size=8,
+        show_valid=True,
+        tile_size=80,
+        num_players=2,
+    ),
+)
+
+register(
     id="TextArena/Wordle-v0",
     entry_point="gym_v.envs.textarena.wordle:TextArenaWordleEnv",
     max_episode_steps=100,
