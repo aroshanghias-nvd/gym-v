@@ -70,16 +70,26 @@ class TestPerception(unittest.TestCase):
 
         env = gym_v.make(env_id)
 
-        # 1. Reset - Perception envs return (Observation, info) directly
-        obs, info = env.reset(seed=test_seed)
+        # 1. Reset - Perception envs now return dicts for multi-agent support
+        obs_dict, info_dict = env.reset(seed=test_seed)
+
+        # Assume agent_0 is the default agent
+        agent_id = "agent_0"
+        self.assertIn(agent_id, obs_dict, f"{env_id}: {agent_id} not in obs_dict")
+        obs = obs_dict[agent_id]
+        info = info_dict[agent_id]
 
         # Check Observation structure
         self.assertIsNotNone(obs.image, f"{env_id}: obs.image should not be None")
         obs.image.save(output_dir / "0_reset.png")
 
         oracle = info.get("oracle_answer")
-        self.assertIsInstance(oracle, str, f"{env_id}: oracle_answer should be a string")
-        self.assertGreater(len(oracle), 0, f"{env_id}: oracle_answer should not be empty")
+        self.assertIsInstance(
+            oracle, str, f"{env_id}: oracle_answer should be a string"
+        )
+        self.assertGreater(
+            len(oracle), 0, f"{env_id}: oracle_answer should not be empty"
+        )
 
         print("\n" + "=" * 80)
         print(f"[{env_id}] SEED: {test_seed}")
@@ -93,40 +103,84 @@ class TestPerception(unittest.TestCase):
         print("=" * 80 + "\n")
 
         # 2. Step - verify step function works with correct answer
-        obs2, reward, terminated, truncated, info2 = env.step(oracle)
+        # Must wrap action in dict for multi-agent interface
+        action_dict = {agent_id: oracle}
+        obs_dict2, reward_dict, terminated_dict, truncated_dict, info_dict2 = env.step(
+            action_dict
+        )
+
+        reward = reward_dict[agent_id]
+        terminated = terminated_dict[agent_id]
+        info2 = info_dict2[agent_id]
 
         self.assertTrue(terminated, f"{env_id}: terminated should be True after step")
         self.assertIsInstance(reward, float, f"{env_id}: reward should be a float")
-        self.assertEqual(reward, 1.0, f"{env_id}: Expected reward 1.0 for oracle answer, got {reward}")
+        self.assertEqual(
+            reward,
+            1.0,
+            f"{env_id}: Expected reward 1.0 for oracle answer, got {reward}",
+        )
 
         # 3. Verify info still contains oracle_answer after step
         oracle2 = info2.get("oracle_answer")
-        self.assertIsNotNone(oracle2, f"{env_id}: info should contain oracle_answer after step")
+        self.assertIsNotNone(
+            oracle2, f"{env_id}: info should contain oracle_answer after step"
+        )
 
         # 4. Test with wrong answer
         env.reset(seed=test_seed)
-        obs_wrong, reward_wrong, terminated_wrong, truncated_wrong, info_wrong = env.step("")
-        self.assertTrue(terminated_wrong, f"{env_id}: terminated should be True for wrong answer")
-        self.assertEqual(reward_wrong, 0.0, f"{env_id}: Expected reward 0.0 for wrong answer, got {reward_wrong}")
+        action_wrong = {agent_id: ""}
+        obs_d_w, reward_d_w, term_d_w, trunc_d_w, info_d_w = env.step(action_wrong)
+
+        reward_wrong = reward_d_w[agent_id]
+        terminated_wrong = term_d_w[agent_id]
+
+        self.assertTrue(
+            terminated_wrong, f"{env_id}: terminated should be True for wrong answer"
+        )
+        self.assertEqual(
+            reward_wrong,
+            0.0,
+            f"{env_id}: Expected reward 0.0 for wrong answer, got {reward_wrong}",
+        )
 
         # 5. Test with multiple seeds
         print(f"[{env_id}] Testing with 3 additional seeds...")
         for i in range(3):
             seed = random.randint(0, 9999)
-            obs_test, info_test = env.reset(seed=seed)
+            obs_d, info_d = env.reset(seed=seed)
+
+            obs_test = obs_d[agent_id]
+            info_test = info_d[agent_id]
 
             oracle_test = info_test.get("oracle_answer")
 
-            self.assertIsNotNone(obs_test.image, f"{env_id}: obs.image should not be None (seed={seed})")
+            self.assertIsNotNone(
+                obs_test.image, f"{env_id}: obs.image should not be None (seed={seed})"
+            )
             obs_test.image.save(output_dir / f"{i + 1}_seed_{seed}.png")
 
-            self.assertIsNotNone(oracle_test, f"{env_id}: oracle_answer should not be None (seed={seed})")
-            self.assertIsInstance(oracle_test, str, f"{env_id}: oracle_answer should be string (seed={seed})")
-            self.assertGreater(len(oracle_test), 0, f"{env_id}: oracle_answer should not be empty (seed={seed})")
+            self.assertIsNotNone(
+                oracle_test, f"{env_id}: oracle_answer should not be None (seed={seed})"
+            )
+            self.assertIsInstance(
+                oracle_test,
+                str,
+                f"{env_id}: oracle_answer should be string (seed={seed})",
+            )
+            self.assertGreater(
+                len(oracle_test),
+                0,
+                f"{env_id}: oracle_answer should not be empty (seed={seed})",
+            )
 
             # Verify step works
-            obs_step, reward_step, term_step, trunc_step, info_step = env.step(oracle_test)
-            self.assertTrue(term_step, f"{env_id}: terminated should be True (seed={seed})")
+            act_d = {agent_id: oracle_test}
+            obs_s, rew_s, term_s, trunc_s, info_s = env.step(act_d)
+            term_test = term_s[agent_id]
+            self.assertTrue(
+                term_test, f"{env_id}: terminated should be True (seed={seed})"
+            )
 
             print(f"  ✓ Seed {seed}: Generated valid puzzle with oracle answer")
 
