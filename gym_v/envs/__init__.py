@@ -353,7 +353,6 @@ register(
     max_episode_steps=100,
     kwargs=dict(
         num_disks=3,
-        num_players=1,
     ),
 )
 
@@ -992,6 +991,134 @@ register(
     max_episode_steps=1,
     kwargs=dict(
         question_type=None,
+        num_players=1,
+    ),
+)
+
+# Perception environments
+register(
+    id="Perception/ChartToTable-v0",
+    entry_point="gym_v.envs.perception.chart_to_table:PerceptionChartToTableEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        max_categories=8,
+        num_players=1,
+    ),
+)
+
+# Graph Algorithm Perception environments
+register(
+    id="Perception/GraphToAdjacency-v0",
+    entry_point="gym_v.envs.perception.graph_to_adjacency:PerceptionGraphToAdjacencyEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        min_nodes=4,
+        max_nodes=8,
+        num_players=1,
+    ),
+)
+
+register(
+    id="Perception/TreeToTraversal-v0",
+    entry_point="gym_v.envs.perception.tree_to_traversal:PerceptionTreeToTraversalEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        min_nodes=5,
+        max_nodes=12,
+        num_players=1,
+    ),
+)
+
+register(
+    id="Perception/DAGToTopoOrder-v0",
+    entry_point="gym_v.envs.perception.dag_to_topo_order:PerceptionDAGToTopoOrderEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        min_nodes=5,
+        max_nodes=9,
+        num_players=1,
+    ),
+)
+
+register(
+    id="Perception/GraphToMST-v0",
+    entry_point="gym_v.envs.perception.graph_to_mst:PerceptionGraphToMSTEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        min_nodes=5,
+        max_nodes=8,
+        num_players=1,
+    ),
+)
+
+register(
+    id="Perception/FlowNetwork-v0",
+    entry_point="gym_v.envs.perception.flow_network:PerceptionFlowNetworkEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        min_nodes=5,
+        max_nodes=8,
+        num_players=1,
+    ),
+)
+
+# Mathematical Function Perception environments
+register(
+    id="Perception/FunctionGraph-v0",
+    entry_point="gym_v.envs.perception.function_graph:PerceptionFunctionGraphEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        x_range=(-5, 5),
+        num_players=1,
+    ),
+)
+
+register(
+    id="Perception/ContourPlot-v0",
+    entry_point="gym_v.envs.perception.contour_plot:PerceptionContourPlotEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        xy_range=(-3, 3),
+        num_players=1,
+    ),
+)
+
+register(
+    id="Perception/PolarPlot-v0",
+    entry_point="gym_v.envs.perception.polar_plot:PerceptionPolarPlotEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        num_players=1,
+    ),
+)
+
+register(
+    id="Perception/VectorField-v0",
+    entry_point="gym_v.envs.perception.vector_field:PerceptionVectorFieldEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
+        xy_range=(-3, 3),
+        grid_density=15,
+        num_players=1,
+    ),
+)
+
+register(
+    id="Perception/ParametricCurve-v0",
+    entry_point="gym_v.envs.perception.parametric_curve:PerceptionParametricCurveEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        img_size=(640, 480),
         num_players=1,
     ),
 )
