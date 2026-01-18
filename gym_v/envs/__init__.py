@@ -792,6 +792,47 @@ register(
     ),
 )
 
+register(
+    id="RLVE/GraphIsomorphism-v0",
+    entry_point="gym_v.envs.rlve.graph_isomorphism:RLVEGraphIsomorphismEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=8,
+        edge_density=0.3,
+        node_radius=20,
+        image_size=800,
+        padding=60,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/MaximumClique-v0",
+    entry_point="gym_v.envs.rlve.maximum_clique:RLVEMaximumCliqueEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=12,
+        edge_density=0.5,
+        node_radius=18,
+        image_size=700,
+        padding=60,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/TreeColoring-v0",
+    entry_point="gym_v.envs.rlve.tree_coloring:RLVETreeColoringEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=10,
+        node_radius=18,
+        image_size=700,
+        padding=60,
+        num_players=1,
+    ),
+)
+
 # Game-RL Q&A environments (single-turn)
 register(
     id="GameRL/Snake-QA-v0",
