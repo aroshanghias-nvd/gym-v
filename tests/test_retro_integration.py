@@ -8,7 +8,7 @@ import unittest
 import stable_retro
 
 import gym_v
-from gym_v.envs.retro_env import RetroGymVEnv
+from gym_v.envs.stable_retro import RetroGymVEnv
 
 
 def rom_available(game: str) -> bool:

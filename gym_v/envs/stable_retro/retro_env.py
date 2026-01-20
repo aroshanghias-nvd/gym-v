@@ -26,7 +26,6 @@ class RetroGymVEnv(Env):
         state: Game state to load (default: stable_retro.State.DEFAULT)
         scenario: Scenario file to use (default: None)
         players: Number of players (default: 1)
-        render_mode: Rendering mode (default: "rgb_array")
         num_players: Number of agents (default: 1)
         **kwargs: Additional arguments passed to stable_retro.make
 
@@ -42,7 +41,6 @@ class RetroGymVEnv(Env):
         state: Any | None = None,
         scenario: str | None = None,
         players: int = 1,
-        render_mode: str = "rgb_array",
         num_players: int = 1,
         **kwargs,
     ):
@@ -57,7 +55,7 @@ class RetroGymVEnv(Env):
         retro_kwargs = {
             "game": game,
             "players": players,
-            "render_mode": render_mode,
+            "render_mode": "rgb_array",
         }
         if state is not None:
             retro_kwargs["state"] = state
@@ -70,25 +68,25 @@ class RetroGymVEnv(Env):
         self._retro_env = stable_retro.make(**retro_kwargs)
 
         # Get button configuration from the retro environment
-        self._buttons = self._retro_env.buttons
+        self.buttons = self._retro_env.buttons
         self._num_buttons = self._retro_env.num_buttons
+        self.available_actions = [b for b in self.buttons if b and b != "NULL"]
 
         # Build button name to index mapping
         self._button_to_idx: dict[str, int] = {}
-        for idx, button in enumerate(self._buttons):
+        for idx, button in enumerate(self.buttons):
             if button and button != "NULL":
                 self._button_to_idx[button.upper()] = idx
 
         logger.info(f"Initialized RetroGymVEnv for game: {game}")
-        logger.info(f"Available buttons: {self._buttons}")
+        logger.info(f"Available buttons: {self.buttons}")
 
     @property
     def description(self) -> str:
-        available_buttons = [b for b in self._buttons if b and b != "NULL"]
         return dedent(f"""
             This is a retro game environment: {self._game}.
 
-            Available buttons: {available_buttons}
+            Available buttons: {self.available_actions}
 
             ## Output Format
             You must output ONLY the action string, nothing else. No explanation, no reasoning, just the action.
@@ -274,13 +272,3 @@ class RetroGymVEnv(Env):
                 parts.append(f"{key}: {value}")
 
         return " | ".join(parts)
-
-    @property
-    def buttons(self) -> list[str]:
-        """Return the list of available buttons for this game."""
-        return self._buttons
-
-    @property
-    def available_actions(self) -> list[str]:
-        """Return the list of valid single-button actions."""
-        return [b for b in self._buttons if b and b != "NULL"]
