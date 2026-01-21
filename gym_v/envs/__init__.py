@@ -1525,3 +1525,13 @@ register(
         num_players=1,
     ),
 )
+
+# PettingZoo environments
+register(
+    id="PettingZoo/ConnectFour-v0",
+    entry_point="gym_v.envs.multi_players.pettingzoo.connectfour:PettingZooConnectFour",
+    max_episode_steps=100,
+    kwargs=dict(
+        num_players=2,
+    ),
+)
