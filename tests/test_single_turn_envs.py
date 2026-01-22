@@ -1,0 +1,423 @@
+"""Unified tests for all single-turn gym-v environments.
+
+This module consolidates tests for single-turn Q&A and puzzle environments across
+multiple benchmark suites: ReasoningGym, GameRL, Perception, VGRP, Sphinx, and RLVE.
+
+All environments follow the multi-agent dictionary interface with max_episode_steps=1.
+Tests verify image generation, oracle answer validity, and reward grading for both
+correct and incorrect answers.
+"""
+
+from __future__ import annotations
+
+import random
+import string
+from pathlib import Path
+from typing import Any
+import unittest
+
+import gym_v
+from gym_v.wrappers import Observation
+
+
+# Environment registries organized by benchmark suite
+REASONING_GYM_ENVS = {
+    "ReasoningGym/QuestionAnswering-v0": "question_answering",
+    "ReasoningGym/OpenBookQA-v0": "open_book_qa",
+    "ReasoningGym/PIQA-v0": "piqa",
+    "ReasoningGym/BoolQ-v0": "boolq",
+    "ReasoningGym/ARC-Easy-v0": "arc_easy",
+    "ReasoningGym/ARC-Challenge-v0": "arc_challenge",
+    "ReasoningGym/GPQA-Diamond-v0": "gpqa_diamond",
+    "ReasoningGym/MMLU-v0": "mmlu",
+    "ReasoningGym/MMLU-Pro-v0": "mmlu_pro",
+    "ReasoningGym/MMMU-v0": "mmmu",
+    "ReasoningGym/MathVista-v0": "mathvista",
+    "ReasoningGym/MathVision-v0": "mathvision",
+    "ReasoningGym/ScienceQA-v0": "scienceqa",
+    "ReasoningGym/GSM8K-v0": "gsm8k",
+    "ReasoningGym/MATH-v0": "math",
+    "ReasoningGym/BBH-v0": "bbh",
+    "ReasoningGym/DROP-v0": "drop",
+    "ReasoningGym/HumanEval-v0": "humaneval",
+    "ReasoningGym/MBPP-v0": "mbpp",
+}
+
+GAMERL_ENVS = {
+    "GameRL/WordSorting-v0": "word_sorting",
+    "GameRL/ObjectCounting-v0": "object_counting",
+    "GameRL/Countdown-v0": "countdown",
+    "GameRL/24Game-v0": "24game",
+    "GameRL/EightPuzzle-v0": "eight_puzzle",
+    "GameRL/ConnectFour-v0": "connect_four",
+    "GameRL/Sokoban-v0": "sokoban",
+    "GameRL/2048-v0": "2048",
+    "GameRL/RushHour-v0": "rush_hour",
+    "GameRL/Klondike-v0": "klondike",
+    "GameRL/FreeCell-v0": "freecell",
+    "GameRL/Hanoi-v0": "hanoi",
+    "GameRL/LEGO-v0": "lego",
+    "GameRL/Crosswords-v0": "crosswords",
+    "GameRL/HexGame-v0": "hex_game",
+    "GameRL/Nim-v0": "nim",
+    "GameRL/Reversi-v0": "reversi",
+    "GameRL/UtahTeapot-v0": "utah_teapot",
+    "GameRL/MiniRubiksCube-v0": "mini_rubiks_cube",
+    "GameRL/RubiksCube-v0": "rubiks_cube",
+    "GameRL/Bridge-v0": "bridge",
+    "GameRL/Sudoku-v0": "sudoku",
+    "GameRL/Poker-v0": "poker",
+    "GameRL/Chess-v0": "chess",
+    "GameRL/Go-v0": "go",
+    "GameRL/Shogi-v0": "shogi",
+    "GameRL/ZeroSumGame-v0": "zero_sum_game",
+    "GameRL/MajhongJudgement-v0": "majhong_judgement",
+    "GameRL/MahjongCompleteHand-v0": "mahjong_complete_hand",
+    "GameRL/KanjiRecognition-v0": "kanji_recognition",
+}
+
+PERCEPTION_ENVS = {
+    "Perception/ChartToTable-v0": "chart_to_table",
+    "Perception/GraphToAdjacency-v0": "graph_to_adjacency",
+    "Perception/TreeToTraversal-v0": "tree_to_traversal",
+    "Perception/DAGToTopoOrder-v0": "dag_to_topo_order",
+    "Perception/GraphToMST-v0": "graph_to_mst",
+    "Perception/FlowNetwork-v0": "flow_network",
+    "Perception/FunctionGraph-v0": "function_graph",
+    "Perception/ContourPlot-v0": "contour_plot",
+    "Perception/PolarPlot-v0": "polar_plot",
+    "Perception/VectorField-v0": "vector_field",
+    "Perception/ParametricCurve-v0": "parametric_curve",
+}
+
+VGRP_ENVS = {
+    "VGRP/Binairo-v0": "binairo",
+    "VGRP/Thermometers-v0": "thermometers",
+    "VGRP/TreesAndTents-v0": "treesandtents",
+    "VGRP/Battleships-v0": "battleships",
+    "VGRP/Renzoku-v0": "renzoku",
+    "VGRP/Futoshiki-v0": "futoshiki",
+    "VGRP/Hitori-v0": "hitori",
+    "VGRP/StarBattle-v0": "starbattle",
+}
+
+SPHINX_ENVS = {
+    "Sphinx/TransformResult-v0": "transform_result",
+    "Sphinx/TransformResultPoly-v0": "transform_result_poly",
+    "Sphinx/SymmetryFill-v0": "symmetry_fill",
+    "Sphinx/SymmetryFillPoly-v0": "symmetry_fill_poly",
+    "Sphinx/OddOneOut-v0": "odd_one_out",
+    "Sphinx/OddOneOutPoly-v0": "odd_one_out_poly",
+    "Sphinx/SequenceCompletion-v0": "sequence_completion",
+    "Sphinx/SequenceCompletionPoly-v0": "sequence_completion_poly",
+}
+
+RLVE_ENVS = {
+    "RLVE/HitoriPuzzle-v0": "hitori_puzzle",
+    "RLVE/SkyscraperPuzzle-v0": "skyscraper_puzzle",
+    "RLVE/LightUpPuzzle-v0": "light_up_puzzle",
+}
+
+
+class TestSingleTurnEnvironments(unittest.TestCase):
+    """Unified test suite for all single-turn gym-v environments.
+
+    Tests verify:
+    1. Environment creation and reset
+    2. Image generation and saving
+    3. Oracle answer retrieval
+    4. Reward grading for correct answers (expect 1.0)
+    5. Reward grading for wrong answers:
+       - Empty string ""
+       - Perturbed correct answer
+    6. Multi-seed stability
+    """
+
+    def _get_output_dir(self, env_id: str) -> Path:
+        """Get output directory for environment test artifacts.
+
+        Args:
+            env_id: Environment ID (e.g., "ReasoningGym/MMLU-v0")
+
+        Returns:
+            Path to output directory
+        """
+        suite, name = env_id.split("/")
+        name_clean = name.replace("-v0", "")
+        snake_name = "".join(
+            f"_{c.lower()}" if c.isupper() else c for c in name_clean
+        ).lstrip("_")
+        return (
+            Path(__file__).resolve().parent
+            / f"test_output_{suite.lower()}_{snake_name}"
+        )
+
+    def _setup_output_dir(self, output_dir: Path) -> None:
+        """Create or clean output directory.
+
+        Args:
+            output_dir: Directory to setup
+        """
+        if output_dir.exists():
+            for p in output_dir.glob("*"):
+                if p.is_file():
+                    p.unlink()
+        else:
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+    def _get_oracle_answer(
+        self, env: Any, info: dict[str, Any]
+    ) -> str:
+        """Retrieve oracle answer from environment or info dict.
+
+        Different benchmark suites store oracle answers in different locations:
+        - ReasoningGym: env.get_wrapper_attr("_oracle_answer")
+        - RLVE: info["reference_answer"]
+        - Others: info["oracle_answer"]
+
+        Args:
+            env: The gym environment
+            info: Info dictionary from reset/step
+
+        Returns:
+            Oracle answer string
+        """
+        # Try wrapper attribute first (ReasoningGym)
+        try:
+            oracle = env.get_wrapper_attr("_oracle_answer")
+            if oracle:
+                return oracle
+        except (AttributeError, KeyError):
+            pass
+
+        # Try info dict (most common)
+        oracle = info.get("oracle_answer")
+        if oracle:
+            return oracle
+
+        # Try reference_answer (RLVE)
+        oracle = info.get("reference_answer")
+        if oracle:
+            return oracle
+
+        raise ValueError(f"Could not find oracle answer in env or info: {info.keys()}")
+
+    def _perturb_answer(self, answer: str) -> str:
+        """Create a perturbed version of the correct answer.
+
+        Applies random perturbation to create an incorrect but non-empty answer:
+        - If multi-choice format like "(a)", change to different option
+        - Otherwise, randomly modify 1-3 characters
+
+        Args:
+            answer: Correct answer string
+
+        Returns:
+            Perturbed answer string
+        """
+        if not answer:
+            return "WRONG"
+
+        # Handle multi-choice format: (a), (b), etc.
+        if len(answer) == 3 and answer[0] == "(" and answer[2] == ")":
+            choices = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)"]
+            other_choices = [c for c in choices if c != answer]
+            return random.choice(other_choices)
+
+        # For other formats, randomly perturb the string
+        answer_list = list(answer)
+        num_changes = min(random.randint(1, 3), len(answer_list))
+
+        for _ in range(num_changes):
+            idx = random.randint(0, len(answer_list) - 1)
+            # Replace with random alphanumeric character
+            answer_list[idx] = random.choice(string.ascii_letters + string.digits)
+
+        perturbed = "".join(answer_list)
+
+        # Ensure it's actually different
+        if perturbed == answer:
+            return answer + "_WRONG"
+
+        return perturbed
+
+    def _test_env(self, env_id: str, env_name: str) -> None:
+        """Test a single environment comprehensively.
+
+        Args:
+            env_id: Environment ID for gym_v.make()
+            env_name: Human-readable environment name
+        """
+        output_dir = self._get_output_dir(env_id)
+        self._setup_output_dir(output_dir)
+
+        test_seed = random.randint(0, 9999)
+        print(f"\n[{env_id}] Using random seed: {test_seed}")
+
+        env = gym_v.make(env_id)
+
+        # Reset environment
+        obs_dict, info_dict = env.reset(seed=test_seed)
+
+        # Extract agent_0 data (all single-turn envs use agent_0)
+        agent_id = "agent_0"
+        self.assertIn(agent_id, obs_dict, f"{env_id}: agent_0 not in obs_dict")
+        self.assertIn(agent_id, info_dict, f"{env_id}: agent_0 not in info_dict")
+
+        obs: Observation = obs_dict[agent_id]
+        info = info_dict[agent_id]
+
+        # Test 1: Save image
+        self.assertIsNotNone(obs.image, f"{env_id}: obs.image is None")
+        obs.image.save(output_dir / "0_reset.png")
+
+        # Test 2: Get oracle answer
+        oracle = self._get_oracle_answer(env, info)
+        self.assertIsInstance(oracle, str, f"{env_id}: oracle is not string")
+        self.assertGreater(len(oracle), 0, f"{env_id}: oracle is empty")
+
+        # Print diagnostic info
+        print("\n" + "=" * 80)
+        print(f"[{env_id}] SEED: {test_seed}")
+        print(f"[{env_id}] DESCRIPTION:")
+        desc = env.description[:500] if len(env.description) > 500 else env.description
+        print(desc)
+        print(f"\n[{env_id}] OBS.TEXT:")
+        text = obs.text or "No text"
+        print(text[:500] if len(text) > 500 else text)
+        print(f"\n[{env_id}] ORACLE ANSWER:")
+        print(oracle[:300] + "..." if len(oracle) > 300 else oracle)
+        print("=" * 80 + "\n")
+
+        # Test 3: Verify correct answer reward
+        action_dict = {agent_id: oracle}
+        _, reward_dict, terminated_dict, _, _ = env.step(action_dict)
+
+        self.assertIn(agent_id, reward_dict)
+        self.assertIn(agent_id, terminated_dict)
+        self.assertTrue(terminated_dict[agent_id], f"{env_id}: not terminated after step")
+        self.assertIsInstance(reward_dict[agent_id], float)
+        self.assertAlmostEqual(
+            reward_dict[agent_id],
+            1.0,
+            places=6,
+            msg=f"{env_id}: Expected reward 1.0 for correct answer, got {reward_dict[agent_id]}",
+        )
+
+        # Test 4: Verify empty string reward (should be 0.0 or negative)
+        obs_dict, info_dict = env.reset(seed=test_seed)
+        action_empty = {agent_id: ""}
+        _, reward_empty, terminated_empty, _, _ = env.step(action_empty)
+
+        self.assertTrue(terminated_empty[agent_id])
+        self.assertIsInstance(reward_empty[agent_id], float)
+
+        # RLVE environments return negative rewards for wrong answers
+        if "RLVE" in env_id:
+            self.assertLess(
+                reward_empty[agent_id],
+                0.0,
+                f"{env_id}: Expected negative reward for empty answer",
+            )
+        else:
+            self.assertEqual(
+                reward_empty[agent_id],
+                0.0,
+                f"{env_id}: Expected reward 0.0 for empty answer, got {reward_empty[agent_id]}",
+            )
+
+        # Test 5: Verify perturbed answer reward
+        obs_dict, info_dict = env.reset(seed=test_seed)
+        info_reset = info_dict[agent_id]
+        oracle_reset = self._get_oracle_answer(env, info_reset)
+
+        perturbed = self._perturb_answer(oracle_reset)
+        action_perturbed = {agent_id: perturbed}
+        _, reward_perturbed, terminated_perturbed, _, _ = env.step(action_perturbed)
+
+        self.assertTrue(terminated_perturbed[agent_id])
+        self.assertIsInstance(reward_perturbed[agent_id], float)
+
+        # RLVE environments return negative rewards for wrong answers
+        if "RLVE" in env_id:
+            self.assertLess(
+                reward_perturbed[agent_id],
+                0.0,
+                f"{env_id}: Expected negative reward for perturbed answer '{perturbed}'",
+            )
+        else:
+            self.assertEqual(
+                reward_perturbed[agent_id],
+                0.0,
+                f"{env_id}: Expected reward 0.0 for perturbed answer '{perturbed}', got {reward_perturbed[agent_id]}",
+            )
+
+        # Test 6: Multi-seed stability
+        print(f"[{env_id}] Testing with 3 additional seeds...")
+        for i in range(3):
+            seed = random.randint(0, 9999)
+            obs_test_dict, info_test_dict = env.reset(seed=seed)
+
+            obs_test = obs_test_dict[agent_id]
+            info_test = info_test_dict[agent_id]
+
+            # Save image
+            self.assertIsNotNone(obs_test.image, f"{env_id}: image None (seed={seed})")
+            obs_test.image.save(output_dir / f"{i + 1}_seed_{seed}.png")
+
+            # Get oracle
+            oracle_test = self._get_oracle_answer(env, info_test)
+            self.assertIsNotNone(oracle_test, f"{env_id}: oracle None (seed={seed})")
+            self.assertIsInstance(oracle_test, str)
+            self.assertGreater(len(oracle_test), 0)
+
+            # Verify correct answer gives reward 1.0
+            _, reward_test_dict, _, _, _ = env.step({agent_id: oracle_test})
+            self.assertAlmostEqual(
+                reward_test_dict[agent_id],
+                1.0,
+                places=6,
+                msg=f"{env_id}: Expected reward 1.0 (seed={seed})",
+            )
+
+            print(f"  ✓ Seed {seed}: Generated valid puzzle with oracle answer")
+
+        env.close()
+        print(f"✅ {env_id}: All tests passed (primary_seed={test_seed})")
+
+
+def _make_test_method(env_id: str, env_name: str):
+    """Factory function to dynamically create test methods.
+
+    Args:
+        env_id: Environment ID
+        env_name: Environment name for test method naming
+
+    Returns:
+        Test method function
+    """
+    def test_method(self):
+        self._test_env(env_id, env_name)
+
+    test_method.__name__ = f"test_{env_name}"
+    test_method.__doc__ = f"Test {env_id} environment."
+    return test_method
+
+
+# Dynamically generate test methods for all environments
+ALL_ENVS = {
+    **REASONING_GYM_ENVS,
+    **GAMERL_ENVS,
+    **PERCEPTION_ENVS,
+    **VGRP_ENVS,
+    **SPHINX_ENVS,
+    **RLVE_ENVS,
+}
+
+for _env_id, _env_name in ALL_ENVS.items():
+    _test_method = _make_test_method(_env_id, _env_name)
+    setattr(TestSingleTurnEnvironments, _test_method.__name__, _test_method)
+
+
+if __name__ == "__main__":
+    unittest.main()
