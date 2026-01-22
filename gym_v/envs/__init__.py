@@ -381,16 +381,6 @@ register(
 )
 
 register(
-    id="TextArena/Checkers-v0",
-    entry_point="gym_v.envs.multi_players.textarena.checkers:TextArenaCheckers",
-    max_episode_steps=200,
-    kwargs=dict(
-        tile_size=60,
-        num_players=2,
-    ),
-)
-
-register(
     id="TextArena/Nim-v0",
     entry_point="gym_v.envs.multi_players.textarena.nim:TextArenaNim",
     max_episode_steps=50,
