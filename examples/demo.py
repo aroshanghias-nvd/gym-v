@@ -43,13 +43,7 @@ def parse_env_args(env_args: tuple[str, ...]) -> dict[str, Any]:
 @click.command()
 @click.option("--id", "env_id", default="TextArena/Sokoban-v0", show_default=True)
 @click.option("--env-args", "env_args", multiple=True)
-@click.option(
-    "--agent",
-    "fixed_agent_id",
-    default=None,
-    help="Fix to control a specific agent (e.g., agent_0, player_0). If not set, auto-switch for turn-based games.",
-)
-def main(env_id: str, env_args: tuple[str, ...], fixed_agent_id: str | None):
+def main(env_id: str, env_args: tuple[str, ...]):
     root = tk.Tk()
     root.title(f"gym-v: {env_id}")
     root.attributes("-topmost", True)
@@ -69,10 +63,7 @@ def main(env_id: str, env_args: tuple[str, ...], fixed_agent_id: str | None):
     is_game_over = False
 
     logger.info(f"Environment {env_id} created.")
-    if fixed_agent_id:
-        logger.info(f"Mode: Fixed Agent Control - {fixed_agent_id}")
-    else:
-        logger.info("Mode: Auto-Switch (Turn-based)")
+    logger.info("Mode: Auto-Switch (Turn-based)")
 
     logger.info("Controls: Type command and Enter.")
     logger.info("  - 'reset' or 'r': Reset environment")
@@ -87,19 +78,9 @@ def main(env_id: str, env_args: tuple[str, ...], fixed_agent_id: str | None):
         sys.exit(1)
 
     # Determine initial agent
-    if fixed_agent_id:
-        # Fixed agent mode
-        if fixed_agent_id not in obs_dict:
-            logger.error(
-                f"Agent '{fixed_agent_id}' not found in observation dict: {list(obs_dict.keys())}"
-            )
-            sys.exit(1)
-        current_agent_id = fixed_agent_id
-        logger.info(f"Controlling Agent: {current_agent_id}")
-    else:
-        # Auto-switch mode (for turn-based games)
-        current_agent_id = list(obs_dict.keys())[0]
-        logger.info(f"Starting Player: {current_agent_id}")
+    # Auto-switch mode (for turn-based games)
+    current_agent_id = list(obs_dict.keys())[0]
+    logger.info(f"Starting Player: {current_agent_id}")
 
     obs = obs_dict[current_agent_id]
     info = info_dict.get(current_agent_id, {})
@@ -128,7 +109,7 @@ def main(env_id: str, env_args: tuple[str, ...], fixed_agent_id: str | None):
     while running:
         try:
             # Render image for the current player
-            if hasattr(obs, 'image') and obs.image:
+            if hasattr(obs, "image") and obs.image:
                 tk_image = ImageTk.PhotoImage(obs.image)
                 image_label.configure(image=tk_image)
                 image_label.image = tk_image
@@ -160,15 +141,7 @@ def main(env_id: str, env_args: tuple[str, ...], fixed_agent_id: str | None):
             obs_dict, info_dict = env.reset()
 
             # Redetermine agent after reset
-            if fixed_agent_id:
-                if fixed_agent_id not in obs_dict:
-                    logger.error(
-                        f"Agent '{fixed_agent_id}' not found after reset: {list(obs_dict.keys())}"
-                    )
-                    break
-                current_agent_id = fixed_agent_id
-            else:
-                current_agent_id = list(obs_dict.keys())[0]
+            current_agent_id = list(obs_dict.keys())[0]
 
             obs = obs_dict[current_agent_id]
             is_game_over = False
@@ -217,23 +190,12 @@ def main(env_id: str, env_args: tuple[str, ...], fixed_agent_id: str | None):
 
         else:
             # --- Player Switching Logic ---
-            if fixed_agent_id:
-                # Fixed agent mode: always use the fixed agent
-                if fixed_agent_id not in obs_dict:
-                    logger.warning(
-                        f"Fixed agent '{fixed_agent_id}' not in obs_dict. "
-                        f"Available: {list(obs_dict.keys())}"
-                    )
-                    # Keep current state, wait for next valid observation
-                    continue
-                current_agent_id = fixed_agent_id
-            else:
-                # Auto-switch mode: get next player from obs_dict
-                if not obs_dict:
-                    logger.error("No observations returned, cannot determine next player!")
-                    break
-                next_agent_id = list(obs_dict.keys())[0]
-                current_agent_id = next_agent_id
+            # Auto-switch mode: get next player from obs_dict
+            if not obs_dict:
+                logger.error("No observations returned, cannot determine next player!")
+                break
+            next_agent_id = list(obs_dict.keys())[0]
+            current_agent_id = next_agent_id
 
             obs = obs_dict[current_agent_id]
             info = info_dict.get(current_agent_id, {})

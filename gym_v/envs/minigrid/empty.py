@@ -6,8 +6,6 @@ from textwrap import dedent
 from typing import Any
 
 import gymnasium as gym
-import minigrid
-import numpy as np
 from PIL import Image
 
 from gym_v import Env, Observation, get_logger
@@ -47,7 +45,9 @@ class MinigridEmptyEnv(Env):
         self._max_episode_steps = max_episode_steps
 
         self._minigrid_env = gym.make(
-            "MiniGrid-Empty-8x8-v0" if size == 8 else f"MiniGrid-Empty-{size}x{size}-v0",
+            "MiniGrid-Empty-8x8-v0"
+            if size == 8
+            else f"MiniGrid-Empty-{size}x{size}-v0",
             render_mode="rgb_array",
             agent_start_pos=agent_start_pos,
             max_steps=max_episode_steps,

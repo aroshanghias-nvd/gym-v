@@ -6,7 +6,6 @@ from textwrap import dedent
 from typing import Any
 
 import gymnasium as gym
-import minigrid
 from PIL import Image
 
 from gym_v import Env, Observation, get_logger
@@ -138,7 +137,9 @@ class MinigridUnlockEnv(Env):
         if unwrapped_env.carrying is not None:
             carrying = f"{unwrapped_env.carrying.color} {unwrapped_env.carrying.type}"
 
-        return f"{mission}\nYou are facing {direction_str}.\nYou are carrying: {carrying}."
+        return (
+            f"{mission}\nYou are facing {direction_str}.\nYou are carrying: {carrying}."
+        )
 
     def close(self):
         self._minigrid_env.close()

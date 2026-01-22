@@ -6,7 +6,6 @@ from textwrap import dedent
 from typing import Any
 
 import gymnasium as gym
-import minigrid
 from PIL import Image
 
 from gym_v import Env, Observation, get_logger
