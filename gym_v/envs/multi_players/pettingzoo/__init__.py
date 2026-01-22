@@ -10,16 +10,3 @@ from gym_v.envs.multi_players.pettingzoo.texas_holdem_no_limit import (
     PettingZooTexasHoldemNoLimit,
 )
 from gym_v.envs.multi_players.pettingzoo.tictactoe import PettingZooTicTacToe
-
-__all__ = [
-    "PettingZooChess",
-    "PettingZooConnectFour",
-    "PettingZooGinRummy",
-    "PettingZooGo",
-    "PettingZooHanabi",
-    "PettingZooLeducHoldem",
-    "PettingZooRPS",
-    "PettingZooTexasHoldem",
-    "PettingZooTexasHoldemNoLimit",
-    "PettingZooTicTacToe",
-]
