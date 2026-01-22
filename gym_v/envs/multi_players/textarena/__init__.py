@@ -1,6 +1,5 @@
 from gym_v.envs.multi_players.textarena.alquerque import TextArenaAlquerque
 from gym_v.envs.multi_players.textarena.breakthrough import TextArenaBreakthrough
-from gym_v.envs.multi_players.textarena.checkers import TextArenaCheckers
 from gym_v.envs.multi_players.textarena.connectfour import TextArenaConnectFour
 from gym_v.envs.multi_players.textarena.crusade import TextArenaCrusade
 from gym_v.envs.multi_players.textarena.linesofaction import TextArenaLinesOfAction

@@ -1,4 +1,4 @@
-"""Interactive gym-v environment viewer."""
+"""Interactive gym-v environment viewer supporting both single-player and multiplayer games."""
 
 from __future__ import annotations
 
@@ -43,10 +43,15 @@ def parse_env_args(env_args: tuple[str, ...]) -> dict[str, Any]:
 @click.command()
 @click.option("--id", "env_id", default="TextArena/Sokoban-v0", show_default=True)
 @click.option("--env-args", "env_args", multiple=True)
-@click.option("--agent", "agent_id", default="agent_0", help="The agent to control")
-def main(env_id: str, env_args: tuple[str, ...], agent_id: str):
+@click.option(
+    "--agent",
+    "fixed_agent_id",
+    default=None,
+    help="Fix to control a specific agent (e.g., agent_0, player_0). If not set, auto-switch for turn-based games.",
+)
+def main(env_id: str, env_args: tuple[str, ...], fixed_agent_id: str | None):
     root = tk.Tk()
-    root.title(f"gym-v: {env_id} ({agent_id})")
+    root.title(f"gym-v: {env_id}")
     root.attributes("-topmost", True)
 
     image_label = tk.Label(root)
@@ -64,28 +69,56 @@ def main(env_id: str, env_args: tuple[str, ...], agent_id: str):
     is_game_over = False
 
     logger.info(f"Environment {env_id} created.")
-    logger.info(f"Controlling Agent: {agent_id}")
+    if fixed_agent_id:
+        logger.info(f"Mode: Fixed Agent Control - {fixed_agent_id}")
+    else:
+        logger.info("Mode: Auto-Switch (Turn-based)")
+
     logger.info("Controls: Type command and Enter.")
-    logger.info("  - 'reset' or 'r: Reset environment")
+    logger.info("  - 'reset' or 'r': Reset environment")
     logger.info("  - 'quit' or 'q': Exit")
 
-    logger.info(f"\nEnv Description: {env.description}")
-
-    # Handle Multi-Agent Reset
+    # Initial Reset
     obs_dict, info_dict = env.reset()
-    if agent_id not in obs_dict:
-        logger.error(
-            f"Agent {agent_id} not found in observation dict: {obs_dict.keys()}"
-        )
+
+    # Check if obs_dict is empty
+    if not obs_dict:
+        logger.error("No observations returned after reset!")
         sys.exit(1)
 
-    obs = obs_dict[agent_id]
-    info = info_dict.get(agent_id, {})
+    # Determine initial agent
+    if fixed_agent_id:
+        # Fixed agent mode
+        if fixed_agent_id not in obs_dict:
+            logger.error(
+                f"Agent '{fixed_agent_id}' not found in observation dict: {list(obs_dict.keys())}"
+            )
+            sys.exit(1)
+        current_agent_id = fixed_agent_id
+        logger.info(f"Controlling Agent: {current_agent_id}")
+    else:
+        # Auto-switch mode (for turn-based games)
+        current_agent_id = list(obs_dict.keys())[0]
+        logger.info(f"Starting Player: {current_agent_id}")
+
+    obs = obs_dict[current_agent_id]
+    info = info_dict.get(current_agent_id, {})
 
     width = shutil.get_terminal_size(fallback=(80, 20)).columns
+
+    # Print environment description
+    desc = env.description
+    if isinstance(desc, dict):
+        # If description is a dict (like in multiplayer games), print specific player description
+        player_desc = desc.get(current_agent_id, str(desc))
+        logger.info(f"\nEnv Description for {current_agent_id}:\n{player_desc}")
+    else:
+        logger.info(f"\nEnv Description: {desc}")
+
     logger.info(
         dedent(f"""
         {f" Step info(step_count={env.get_wrapper_attr('_current_episode_steps')}) ".center(width, "=")}
+        Current Player: {current_agent_id}
         observation (text): {obs.text}
         info: {info}
         {"=" * width}""")
@@ -94,19 +127,19 @@ def main(env_id: str, env_args: tuple[str, ...], agent_id: str):
     running = True
     while running:
         try:
-            tk_image = ImageTk.PhotoImage(obs.image)
-
-            image_label.configure(image=tk_image)
-            image_label.image = tk_image
-            root.update()
-
+            # Render image for the current player
+            if hasattr(obs, 'image') and obs.image:
+                tk_image = ImageTk.PhotoImage(obs.image)
+                image_label.configure(image=tk_image)
+                image_label.image = tk_image
+                root.update()
         except tk.TclError:
             break
 
         prompt = (
             "[Game Over] Type 'r' to reset >>> "
             if is_game_over
-            else f"[{agent_id}] >>> "
+            else f"[{current_agent_id}] >>> "
         )
 
         try:
@@ -125,45 +158,100 @@ def main(env_id: str, env_args: tuple[str, ...], agent_id: str):
 
         elif action_lower in ("reset", "r"):
             obs_dict, info_dict = env.reset()
-            obs = obs_dict[agent_id]
+
+            # Redetermine agent after reset
+            if fixed_agent_id:
+                if fixed_agent_id not in obs_dict:
+                    logger.error(
+                        f"Agent '{fixed_agent_id}' not found after reset: {list(obs_dict.keys())}"
+                    )
+                    break
+                current_agent_id = fixed_agent_id
+            else:
+                current_agent_id = list(obs_dict.keys())[0]
+
+            obs = obs_dict[current_agent_id]
             is_game_over = False
             logger.info(f"Environment({env_id}) Reset")
+
+            # Re-print description if needed
+            desc = env.description
+            if isinstance(desc, dict):
+                logger.info(
+                    f"\nEnv Description for {current_agent_id}:\n{desc.get(current_agent_id, str(desc))}"
+                )
+
             continue
 
         if is_game_over:
             logger.info("Game over. Type 'r' to reset.")
             continue
 
-        # Handle Multi-Agent Step
-        action_dict = {agent_id: action}
-        obs_dict, reward_dict, terminated_dict, truncated_dict, info_dict = env.step(
-            action_dict
-        )
+        # --- Step Execution ---
+        action_dict = {current_agent_id: action}
 
-        obs = obs_dict[agent_id]
-        reward = reward_dict.get(agent_id, 0)
-        terminated = terminated_dict.get(agent_id, False)
-        truncated = truncated_dict.get(agent_id, False)
+        try:
+            obs_dict, reward_dict, terminated_dict, truncated_dict, info_dict = (
+                env.step(action_dict)
+            )
+        except Exception as e:
+            logger.error(f"Step failed: {e}")
+            continue
+
         env_done = terminated_dict.get("__all__", False) or truncated_dict.get(
             "__all__", False
-        )
-        info = info_dict.get(agent_id, {})
-
-        width = shutil.get_terminal_size(fallback=(80, 20)).columns
-        logger.info(
-            dedent(f"""
-            {f" Step info(step_count={env.get_wrapper_attr('_current_episode_steps')}) ".center(width, "=")}
-            observation (text): {obs.text}
-            reward: {reward}
-            terminated: {terminated}
-            truncated: {truncated}
-            info: {info}
-            {"=" * width}""")
         )
 
         if env_done:
             is_game_over = True
-            logger.info("Game over (Env terminated/truncated). Type 'r' to reset.")
+            logger.info("Game over!")
+
+            # Print final rewards and info for all players
+            for pid in reward_dict.keys():
+                if pid != "__all__":
+                    r = reward_dict.get(pid, 0.0)
+                    reason = info_dict.get(pid, {}).get("reward_reason", "")
+                    logger.info(
+                        f"Player {pid}: Reward={r} {f'({reason})' if reason else ''}"
+                    )
+
+        else:
+            # --- Player Switching Logic ---
+            if fixed_agent_id:
+                # Fixed agent mode: always use the fixed agent
+                if fixed_agent_id not in obs_dict:
+                    logger.warning(
+                        f"Fixed agent '{fixed_agent_id}' not in obs_dict. "
+                        f"Available: {list(obs_dict.keys())}"
+                    )
+                    # Keep current state, wait for next valid observation
+                    continue
+                current_agent_id = fixed_agent_id
+            else:
+                # Auto-switch mode: get next player from obs_dict
+                if not obs_dict:
+                    logger.error("No observations returned, cannot determine next player!")
+                    break
+                next_agent_id = list(obs_dict.keys())[0]
+                current_agent_id = next_agent_id
+
+            obs = obs_dict[current_agent_id]
+            info = info_dict.get(current_agent_id, {})
+            reward = reward_dict.get(current_agent_id, 0.0)
+            terminated = terminated_dict.get(current_agent_id, False)
+            truncated = truncated_dict.get(current_agent_id, False)
+
+            logger.info(
+                dedent(f"""
+                {f" Step info(step_count={env.get_wrapper_attr('_current_episode_steps')}) ".center(width, "=")}
+                Current Player: {current_agent_id}
+                observation (text): {obs.text}
+                reward: {reward}
+                terminated: {terminated}
+                truncated: {truncated}
+                info: {info}
+                {"=" * width}""")
+            )
 
     try:
         root.destroy()
