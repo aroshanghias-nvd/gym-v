@@ -1566,15 +1566,6 @@ register(
 )
 
 register(
-    id="PettingZoo/Hanabi-v0",
-    entry_point="gym_v.envs.multi_players.pettingzoo.hanabi:PettingZooHanabi",
-    max_episode_steps=200,
-    kwargs=dict(
-        num_players=2,
-    ),
-)
-
-register(
     id="PettingZoo/LeducHoldem-v0",
     entry_point="gym_v.envs.multi_players.pettingzoo.leduc_holdem:PettingZooLeducHoldem",
     max_episode_steps=100,
