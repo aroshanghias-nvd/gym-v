@@ -65,6 +65,10 @@ class PettingZooRPS(Env):
         """Convert action string to PettingZoo action."""
         action = action.strip().lower()
         action_map = {"rock": 0, "paper": 1, "scissors": 2}
+        if action not in action_map:
+            raise ValueError(
+                f"Invalid action '{action}'. Must be one of: rock, paper, scissors"
+            )
         return action_map[action]
 
     @override
