@@ -37,7 +37,8 @@ class PettingZooHanabi(Env):
                 f"{self.__class__.__name__} supports 2-5 players, got {num_players}"
             )
 
-        env = hanabi_v5.raw_env(players=num_players, render_mode="rgb_array")
+        # Hanabi doesn't support rgb_array rendering, use None
+        env = hanabi_v5.raw_env(players=num_players, render_mode=None)
         env = TerminateIllegalOutOfBoundsWrapper(env)
         self._pz_env = env
 
@@ -73,8 +74,16 @@ class PettingZooHanabi(Env):
         }
 
     def _get_current_observation(self) -> Observation:
-        """Get observation for the current player."""
-        return Observation(image=self.render(), text=None)
+        """Get observation for the current player.
+
+        Note: Hanabi doesn't support image rendering, so we provide text observation.
+        """
+        # Build text description of game state
+        current_player = self._pz_env.agent_selection
+        text = f"Current player: {current_player}\n"
+        text += "(Hanabi is a text-based game - image rendering not available)"
+
+        return Observation(image=None, text=text)
 
     def _get_pz_action(self, action: str) -> int:
         """Convert action string to PettingZoo action."""
@@ -110,10 +119,12 @@ class PettingZooHanabi(Env):
 
             if hint_type == "color":
                 color_idx = colors.index(hint_value)
-                return base + relative_target * 10 + color_idx
+                return base + relative_target * 5 + color_idx
             else:  # rank
                 rank_idx = ranks.index(hint_value)
-                return base + relative_target * 10 + 5 + rank_idx
+                # Rank hints come after all color hints
+                num_other_players = self._num_players - 1
+                return base + num_other_players * 5 + relative_target * 5 + rank_idx
         else:
             raise ValueError(f"Invalid action: {action}")
 
@@ -210,8 +221,11 @@ class PettingZooHanabi(Env):
 
     @override
     def render(self) -> Image.Image | list[Image.Image] | None:
-        """Render the Hanabi game state."""
-        return Image.fromarray(self._pz_env.render())
+        """Render the Hanabi game state.
+
+        Note: Hanabi doesn't support rgb_array rendering, returns None.
+        """
+        return None
 
     @override
     def close(self):
