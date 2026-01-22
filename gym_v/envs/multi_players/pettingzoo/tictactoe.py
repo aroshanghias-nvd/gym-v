@@ -52,13 +52,15 @@ class PettingZooTicTacToe(Env):
             Mark spaces in a 3x3 grid. Get three of your marks in a horizontal,
             vertical, or diagonal row to win!
 
-            Action format: Provide a position number from 0 to 8.
-            Positions are numbered left-to-right, top-to-bottom:
-            0 | 1 | 2
-            ---------
-            3 | 4 | 5
-            ---------
-            6 | 7 | 8
+            Action format: Use coordinate like "A1", "B2", "C3".
+            Columns are A, B, C (left to right). Rows are 1, 2, 3 (top to bottom).
+             A   B   C
+            -----------
+            A1 | B1 | C1   (row 1)
+            -----------
+            A2 | B2 | C2   (row 2)
+            -----------
+            A3 | B3 | C3   (row 3)
         """).strip()
         return {
             "player_1": base_description.format(player_id="1", symbol="X"),
@@ -70,8 +72,39 @@ class PettingZooTicTacToe(Env):
         return Observation(image=self.render(), text=None)
 
     def _get_pz_action(self, action: str) -> int:
-        """Convert action string to PettingZoo action."""
-        return int(action.strip())
+        """Convert action string (e.g., 'A1', 'B2') to PettingZoo action.
+
+        PettingZoo uses column-major order:
+        0 | 3 | 6
+        1 | 4 | 7
+        2 | 5 | 8
+
+        Our coordinate system:
+        A1 | B1 | C1
+        A2 | B2 | C2
+        A3 | B3 | C3
+        """
+        action = action.strip().upper()
+        col_map = {"A": 0, "B": 1, "C": 2}
+
+        if len(action) != 2:
+            raise ValueError(
+                f"Invalid action '{action}'. Use format like 'A1', 'B2', 'C3'."
+            )
+
+        col_char = action[0]
+        row_char = action[1]
+
+        if col_char not in col_map:
+            raise ValueError(f"Invalid column '{col_char}'. Must be A, B, or C.")
+        if row_char not in "123":
+            raise ValueError(f"Invalid row '{row_char}'. Must be 1, 2, or 3.")
+
+        col = col_map[col_char]
+        row = int(row_char) - 1  # Convert to 0-indexed
+
+        # PettingZoo uses column-major: action = col * 3 + row
+        return col * 3 + row
 
     @override
     def inner_step(

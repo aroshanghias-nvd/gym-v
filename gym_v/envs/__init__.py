@@ -1551,6 +1551,9 @@ register(
     max_episode_steps=200,
     kwargs=dict(
         num_players=2,
+        knock_reward=0.5,
+        gin_reward=1.0,
+        opponents_hand_visible=False,
     ),
 )
 
@@ -1569,15 +1572,6 @@ register(
     id="PettingZoo/LeducHoldem-v0",
     entry_point="gym_v.envs.multi_players.pettingzoo.leduc_holdem:PettingZooLeducHoldem",
     max_episode_steps=100,
-    kwargs=dict(
-        num_players=2,
-    ),
-)
-
-register(
-    id="PettingZoo/RPS-v0",
-    entry_point="gym_v.envs.multi_players.pettingzoo.rps:PettingZooRPS",
-    max_episode_steps=10,
     kwargs=dict(
         num_players=2,
     ),

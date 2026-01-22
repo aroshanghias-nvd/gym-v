@@ -28,6 +28,9 @@ class PettingZooGinRummy(Env):
     def __init__(
         self,
         num_players: int = 2,
+        knock_reward: float = 0.5,
+        gin_reward: float = 1.0,
+        opponents_hand_visible: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -37,7 +40,12 @@ class PettingZooGinRummy(Env):
                 f"{self.__class__.__name__} only supports 2 players, got {num_players}"
             )
 
-        env = gin_rummy_v4.raw_env(render_mode="rgb_array")
+        env = gin_rummy_v4.raw_env(
+            knock_reward=knock_reward,
+            gin_reward=gin_reward,
+            opponents_hand_visible=opponents_hand_visible,
+            render_mode="rgb_array",
+        )
         env = TerminateIllegalOutOfBoundsWrapper(env)
         self._pz_env = env
 
