@@ -10,7 +10,6 @@ from gym_v.envs.multi_players.pettingzoo.texas_holdem_no_limit import (
     PettingZooTexasHoldemNoLimit,
 )
 from gym_v.envs.multi_players.pettingzoo.tictactoe import PettingZooTicTacToe
-from gym_v.envs.multi_players.pettingzoo.utils import TerminateIllegalOutOfBoundsWrapper
 
 __all__ = [
     "PettingZooChess",
@@ -23,5 +22,4 @@ __all__ = [
     "PettingZooTexasHoldem",
     "PettingZooTexasHoldemNoLimit",
     "PettingZooTicTacToe",
-    "TerminateIllegalOutOfBoundsWrapper",
 ]
