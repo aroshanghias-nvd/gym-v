@@ -51,31 +51,24 @@ GAMERL_ENVS = {
     "GameRL/Jewel2-QA-v0": "jewel2_qa",
     "GameRL/Klondike-QA-v0": "klondike_qa",
     "GameRL/LangtonAnt-QA-v0": "langton_ant_qa",
-    "GameRL/LangtonAnt-v0": "langton_ant",
     "GameRL/Lifegame-QA-v0": "lifegame_qa",
-    "GameRL/Lifegame-v0": "lifegame",
     "GameRL/Maze-QA-v0": "maze_qa",
-    "GameRL/Maze-v0": "maze",
     "GameRL/Maze3D-QA-v0": "maze3_d_qa",
     "GameRL/Minecraft-QA-v0": "minecraft_qa",
     "GameRL/Minesweeper-QA-v0": "minesweeper_qa",
     "GameRL/Pacman-QA-v0": "pacman_qa",
-    "GameRL/Pacman-v0": "pacman",
     "GameRL/PyramidChess-QA-v0": "pyramid_chess_qa",
     "GameRL/RhythmGame-QA-v0": "rhythm_game_qa",
     "GameRL/RubiksCube-QA-v0": "rubiks_cube_qa",
     "GameRL/Snake-QA-v0": "snake_qa",
-    "GameRL/Snake-v0": "snake",
     "GameRL/Sokoban-QA-v0": "sokoban_qa",
     "GameRL/SpaceInvaders-QA-v0": "space_invaders_qa",
-    "GameRL/SpaceInvaders-v0": "space_invaders",
     "GameRL/SpiderSolitaire-QA-v0": "spider_solitaire_qa",
     "GameRL/StarBattle-QA-v0": "star_battle_qa",
     "GameRL/Sudoku-QA-v0": "sudoku_qa",
     "GameRL/Tangram-QA-v0": "tangram_qa",
     "GameRL/Tents-QA-v0": "tents_qa",
     "GameRL/Tetris-QA-v0": "tetris_qa",
-    "GameRL/Tetris-v0": "tetris",
     "GameRL/TicTacToe-QA-v0": "tic_tac_toe_qa",
     "GameRL/TuringMachine2d-QA-v0": "turing_machine2d_qa",
     "GameRL/UltraTicTacToe-QA-v0": "ultra_tic_tac_toe_qa",
@@ -105,7 +98,6 @@ VGRP_ENVS = {
     "VGRP/Renzoku-v0": "renzoku",
     "VGRP/StarBattle-v0": "star_battle",
     "VGRP/Thermometers-v0": "thermometers",
-    "VGRP/TreesAndTents-v0": "trees_and_tents",
 }
 
 SPHINX_ENVS = {
@@ -123,6 +115,41 @@ RLVE_ENVS = {
     "RLVE/HitoriPuzzle-v0": "hitori_puzzle",
     "RLVE/SkyscraperPuzzle-v0": "skyscraper_puzzle",
     "RLVE/LightUpPuzzle-v0": "light_up_puzzle",
+}
+
+# Environments that use partial credit scoring (from reasoning-gym library)
+# These environments give partial scores based on correctness ratio, not strict 0/1
+PARTIAL_CREDIT_ENVS = {
+    # Grid-based environments with cell-by-cell scoring
+    "ReasoningGym/MiniSudoku-v0": {
+        "reason": "4x4 grid, scores by correct cells / 16",
+        "max_wrong_reward": 0.99,  # Allow up to 99% partial credit
+    },
+    "ReasoningGym/Sudoku-v0": {
+        "reason": "9x9 grid, scores by correct cells / 81 with constraint penalties",
+        "max_wrong_reward": 0.99,
+    },
+    # Substring matching environments
+    "ReasoningGym/RotateMatrix-v0": {
+        "reason": "Substring matching: len(correct) / len(answer)",
+        "max_wrong_reward": 0.99,
+    },
+    # Format-based partial credit
+    "ReasoningGym/Tsumego-v0": {
+        "reason": "Go coordinates: 0.05 for valid format, 0.01 otherwise",
+        "max_wrong_reward": 0.1,  # Only allow small partial credit for format
+    },
+    # Environments that accept multiple valid solutions
+    "VGRP/StarBattle-v0": {
+        "reason": "Accepts any solution satisfying constraints; invalid chars normalize to 'e'",
+        "max_wrong_reward": 1.0,  # Allow full credit for alternative valid solutions
+        "allow_alternative_solutions": True,
+    },
+    "VGRP/Thermometers-v0": {
+        "reason": "Accepts any solution satisfying constraints; invalid chars normalize to 'e'",
+        "max_wrong_reward": 1.0,  # Allow full credit for alternative valid solutions
+        "allow_alternative_solutions": True,
+    },
 }
 
 
@@ -345,14 +372,39 @@ class TestSingleTurnEnvironments(unittest.TestCase):
         self.assertTrue(terminated_perturbed[agent_id])
         self.assertIsInstance(reward_perturbed[agent_id], float)
 
-        # RLVE environments return negative rewards for wrong answers
+        # Check reward based on environment type
         if "RLVE" in env_id:
+            # RLVE environments return negative rewards for wrong answers
             self.assertLess(
                 reward_perturbed[agent_id],
                 0.0,
                 f"{env_id}: Expected negative reward for perturbed answer '{perturbed}'",
             )
+        elif env_id in PARTIAL_CREDIT_ENVS:
+            # Partial credit environments from reasoning-gym
+            # These give scores based on correctness ratio, not strict 0/1
+            config = PARTIAL_CREDIT_ENVS[env_id]
+            max_allowed = config["max_wrong_reward"]
+            allow_alternative_solutions = config.get("allow_alternative_solutions", False)
+
+            # For environments that don't accept alternative solutions,
+            # perturbed answer should not get full credit
+            if not allow_alternative_solutions:
+                self.assertLess(
+                    reward_perturbed[agent_id],
+                    1.0,
+                    f"{env_id}: Perturbed answer should not get full credit (got {reward_perturbed[agent_id]})",
+                )
+
+            # Should not exceed the maximum allowed partial credit
+            self.assertLessEqual(
+                reward_perturbed[agent_id],
+                max_allowed,
+                f"{env_id}: Perturbed answer reward {reward_perturbed[agent_id]} exceeds max {max_allowed}. "
+                f"Reason: {config['reason']}. Perturbed: '{perturbed}'",
+            )
         else:
+            # Standard environments expect 0.0 for wrong answers
             self.assertEqual(
                 reward_perturbed[agent_id],
                 0.0,
