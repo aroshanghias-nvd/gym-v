@@ -49,30 +49,29 @@ class PettingZooGo(Env):
     @override
     @property
     def description(self) -> dict[str, str]:
+        # Generate column labels (A-T, skipping I)
+        cols = "ABCDEFGHJKLMNOPQRST"[: self._board_size]
         base_description = dedent("""
             You are playing <<Go>> as {color} on a {board_size}x{board_size} board.
 
             Place stones to surround territory and capture opponent's stones.
             The game ends when both players pass consecutively.
 
-            Action format: Provide a position number from 0 to {max_action}.
-            Position {pass_action} is pass. Positions 0-{last_pos} represent board intersections.
+            Action format: Provide coordinates like "{example}" or "pass".
+            Columns: {cols} (left to right), Rows: 1-{board_size} (bottom to top).
         """).strip()
-        max_pos = self._board_size * self._board_size - 1
         return {
             "black_0": base_description.format(
                 color="Black",
                 board_size=self._board_size,
-                max_action=max_pos + 1,
-                pass_action=max_pos + 1,
-                last_pos=max_pos,
+                cols=cols,
+                example="D4" if self._board_size >= 4 else "A1",
             ),
             "white_0": base_description.format(
                 color="White",
                 board_size=self._board_size,
-                max_action=max_pos + 1,
-                pass_action=max_pos + 1,
-                last_pos=max_pos,
+                cols=cols,
+                example="D4" if self._board_size >= 4 else "A1",
             ),
         }
 
@@ -81,8 +80,21 @@ class PettingZooGo(Env):
         return Observation(image=self.render(), text=None)
 
     def _get_pz_action(self, action: str) -> int:
-        """Convert action string to PettingZoo action."""
-        return int(action.strip())
+        """Convert coordinate notation to PettingZoo action."""
+        action = action.strip().lower()
+        if action == "pass":
+            return self._board_size * self._board_size
+
+        # Parse coordinate like "D4" -> col=3, row=3
+        col_letter = action[0].upper()
+        row_num = int(action[1:])
+
+        # Column mapping: A=0, B=1, ..., H=7, J=8, ... (skip I)
+        cols = "ABCDEFGHJKLMNOPQRST"
+        col = cols.index(col_letter)
+        row = row_num - 1  # Convert 1-indexed to 0-indexed
+
+        return row * self._board_size + col
 
     @override
     def inner_step(

@@ -53,8 +53,7 @@ class PettingZooTexasHoldem(Env):
             Standard Texas Hold'em poker with limit betting. Each player gets 2 hole cards,
             and 5 community cards are dealt. Make the best 5-card hand.
 
-            Action format: Provide an action number.
-            0 = Call, 1 = Raise, 2 = Fold, 3 = Check
+            Action format: Type "call", "raise", "fold", or "check".
         """).strip()
         return {
             f"player_{i}": base_description.format(player_id=str(i))
@@ -67,7 +66,9 @@ class PettingZooTexasHoldem(Env):
 
     def _get_pz_action(self, action: str) -> int:
         """Convert action string to PettingZoo action."""
-        return int(action.strip())
+        action = action.strip().lower()
+        action_map = {"call": 0, "raise": 1, "fold": 2, "check": 3}
+        return action_map[action]
 
     @override
     def inner_step(

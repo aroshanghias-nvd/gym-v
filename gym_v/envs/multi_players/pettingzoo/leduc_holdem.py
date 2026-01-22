@@ -52,8 +52,7 @@ class PettingZooLeducHoldem(Env):
             A simplified poker with 6 cards (J, Q, K in 2 suits). Each player gets one
             private card, then one community card is revealed.
 
-            Action format: Provide an action number.
-            0 = Call, 1 = Raise, 2 = Fold, 3 = Check
+            Action format: Type "call", "raise", "fold", or "check".
         """).strip()
         return {
             "player_0": base_description.format(player_id="0"),
@@ -66,7 +65,9 @@ class PettingZooLeducHoldem(Env):
 
     def _get_pz_action(self, action: str) -> int:
         """Convert action string to PettingZoo action."""
-        return int(action.strip())
+        action = action.strip().lower()
+        action_map = {"call": 0, "raise": 1, "fold": 2, "check": 3}
+        return action_map[action]
 
     @override
     def inner_step(

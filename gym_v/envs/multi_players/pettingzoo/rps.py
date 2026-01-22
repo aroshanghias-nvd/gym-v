@@ -51,8 +51,7 @@ class PettingZooRPS(Env):
 
             Choose your move: Rock beats Scissors, Scissors beats Paper, Paper beats Rock.
 
-            Action format: Provide an action number.
-            0 = Rock, 1 = Paper, 2 = Scissors
+            Action format: Type "rock", "paper", or "scissors".
         """).strip()
         return {
             "player_0": base_description.format(player_id="0"),
@@ -65,7 +64,9 @@ class PettingZooRPS(Env):
 
     def _get_pz_action(self, action: str) -> int:
         """Convert action string to PettingZoo action."""
-        return int(action.strip())
+        action = action.strip().lower()
+        action_map = {"rock": 0, "paper": 1, "scissors": 2}
+        return action_map[action]
 
     @override
     def inner_step(

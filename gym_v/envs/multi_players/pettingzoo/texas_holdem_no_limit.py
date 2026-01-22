@@ -53,10 +53,14 @@ class PettingZooTexasHoldemNoLimit(Env):
             You are playing <<Texas Hold'em No Limit>> as Player {player_id}.
 
             Standard Texas Hold'em poker with no-limit betting. Each player gets 2 hole cards,
-            and 5 community cards are dealt. Make the best 5-card hand. You can bet any amount.
+            and 5 community cards are dealt. Make the best 5-card hand.
 
-            Action format: Provide an action number.
-            0 = Call, 1 = Raise, 2 = Fold, 3 = Check, 4+ = Raise specific amounts
+            Action format: Type one of the following:
+            - "fold" - Give up the hand
+            - "call" or "check" - Match the current bet or check if no bet
+            - "raise_half" - Raise by half the pot
+            - "raise_pot" - Raise by the full pot
+            - "allin" - Bet all your chips
         """).strip()
         return {
             f"player_{i}": base_description.format(player_id=str(i))
@@ -69,7 +73,17 @@ class PettingZooTexasHoldemNoLimit(Env):
 
     def _get_pz_action(self, action: str) -> int:
         """Convert action string to PettingZoo action."""
-        return int(action.strip())
+        action = action.strip().lower()
+        action_map = {
+            "fold": 0,
+            "call": 1,
+            "check": 1,
+            "raise_half": 2,
+            "raise_pot": 3,
+            "allin": 4,
+            "all_in": 4,
+        }
+        return action_map[action]
 
     @override
     def inner_step(

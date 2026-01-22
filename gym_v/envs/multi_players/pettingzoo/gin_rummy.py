@@ -52,8 +52,15 @@ class PettingZooGinRummy(Env):
             Draw and discard cards to form melds (sets or runs) and minimize deadwood.
             Knock when your deadwood is 10 or less, or go Gin with 0 deadwood.
 
-            Action format: Provide an action number from 0 to 109.
-            Actions encode draw source, discard choice, knock/gin decisions.
+            Action format:
+            - "draw_stock" - Draw from stock pile
+            - "draw_discard" - Pick up from discard pile
+            - "discard <card>" - Discard a card (e.g., "discard AS" for Ace of Spades)
+            - "knock <card>" - Knock and discard a card
+            - "gin" - Declare gin
+
+            Card notation: Rank + Suit (e.g., AS=Ace of Spades, 10H=10 of Hearts, KD=King of Diamonds)
+            Ranks: A, 2-10, J, Q, K | Suits: S(pades), H(earts), C(lubs), D(iamonds)
         """).strip()
         return {
             "player_0": base_description.format(player_id="0"),
@@ -64,9 +71,52 @@ class PettingZooGinRummy(Env):
         """Get observation for the current player."""
         return Observation(image=self.render(), text=None)
 
+    def _card_to_index(self, card: str) -> int:
+        """Convert card notation to index (0-51)."""
+        card = card.upper()
+        suit_map = {"S": 0, "H": 1, "C": 2, "D": 3}
+        rank_map = {
+            "A": 0,
+            "2": 1,
+            "3": 2,
+            "4": 3,
+            "5": 4,
+            "6": 5,
+            "7": 6,
+            "8": 7,
+            "9": 8,
+            "10": 9,
+            "J": 10,
+            "Q": 11,
+            "K": 12,
+        }
+
+        if card[-1] in suit_map:
+            suit = card[-1]
+            rank = card[:-1]
+        else:
+            raise ValueError(f"Invalid card notation: {card}")
+
+        return suit_map[suit] * 13 + rank_map[rank]
+
     def _get_pz_action(self, action: str) -> int:
         """Convert action string to PettingZoo action."""
-        return int(action.strip())
+        action = action.strip().lower()
+
+        if action == "draw_stock":
+            return 52
+        elif action == "draw_discard":
+            return 53
+        elif action == "gin":
+            return 106
+        elif action.startswith("discard "):
+            card = action[8:]
+            return self._card_to_index(card)
+        elif action.startswith("knock "):
+            card = action[6:]
+            return 54 + self._card_to_index(card)
+        else:
+            raise ValueError(f"Invalid action: {action}")
 
     @override
     def inner_step(

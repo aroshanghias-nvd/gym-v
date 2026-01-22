@@ -47,16 +47,28 @@ class PettingZooHanabi(Env):
     @override
     @property
     def description(self) -> dict[str, str]:
+        hand_size = 5 if self._num_players <= 3 else 4
         base_description = dedent("""
             You are playing <<Hanabi>> as Player {player_id}.
 
             This is a cooperative game. Work with other players to play cards 1-5 in order
             for each color. You can see other players' cards but not your own.
 
-            Action format: Provide an action number encoding play, discard, or hint actions.
+            Action format:
+            - "play <pos>" - Play card at position (1-{hand_size})
+            - "discard <pos>" - Discard card at position (1-{hand_size})
+            - "hint <player> color <color>" - Hint a color to another player
+            - "hint <player> rank <rank>" - Hint a rank to another player
+
+            Colors: red, yellow, green, white, blue
+            Ranks: 1, 2, 3, 4, 5
+            Players: player_0, player_1, ...
         """).strip()
         return {
-            f"player_{i}": base_description.format(player_id=str(i))
+            f"player_{i}": base_description.format(
+                player_id=str(i),
+                hand_size=hand_size,
+            )
             for i in range(self._num_players)
         }
 
@@ -66,7 +78,44 @@ class PettingZooHanabi(Env):
 
     def _get_pz_action(self, action: str) -> int:
         """Convert action string to PettingZoo action."""
-        return int(action.strip())
+        action = action.strip().lower()
+        hand_size = 5 if self._num_players <= 3 else 4
+        colors = ["red", "yellow", "green", "white", "blue"]
+        ranks = ["1", "2", "3", "4", "5"]
+
+        if action.startswith("play "):
+            pos = int(action[5:]) - 1  # Convert 1-indexed to 0-indexed
+            return pos
+        elif action.startswith("discard "):
+            pos = int(action[8:]) - 1
+            return hand_size + pos
+        elif action.startswith("hint "):
+            parts = action[5:].split()
+            target_player = int(parts[0].replace("player_", ""))
+            hint_type = parts[1]
+            hint_value = parts[2]
+
+            # Calculate base offset for hints
+            base = hand_size * 2
+
+            # For multi-player, hints are organized by target player
+            current_player_idx = int(
+                self._pz_env.agent_selection.replace("player_", "")
+            )
+
+            # Adjust target index relative to current player
+            relative_target = (target_player - current_player_idx - 1) % (
+                self._num_players - 1
+            )
+
+            if hint_type == "color":
+                color_idx = colors.index(hint_value)
+                return base + relative_target * 10 + color_idx
+            else:  # rank
+                rank_idx = ranks.index(hint_value)
+                return base + relative_target * 10 + 5 + rank_idx
+        else:
+            raise ValueError(f"Invalid action: {action}")
 
     @override
     def inner_step(

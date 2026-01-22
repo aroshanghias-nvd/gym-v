@@ -6,6 +6,7 @@ from collections import defaultdict
 from textwrap import dedent
 from typing import Any
 
+import chess
 from PIL import Image
 from typing_extensions import override
 
@@ -14,6 +15,25 @@ from gym_v.envs.multi_players.pettingzoo.utils import TerminateIllegalOutOfBound
 from pettingzoo.classic import chess_v6
 
 logger = get_logger()
+
+# Maps for converting between UCI moves and PettingZoo action indices
+MOVE_TYPES = {
+    # Queen-type moves: direction * 7 distances
+    "N": list(range(7)),  # North
+    "NE": list(range(7, 14)),  # Northeast
+    "E": list(range(14, 21)),  # East
+    "SE": list(range(21, 28)),  # Southeast
+    "S": list(range(28, 35)),  # South
+    "SW": list(range(35, 42)),  # Southwest
+    "W": list(range(42, 49)),  # West
+    "NW": list(range(49, 56)),  # Northwest
+    # Knight moves
+    "KNIGHT": list(range(56, 64)),
+    # Underpromotions (to rook, bishop, knight)
+    "UNDERPROMO": list(range(64, 73)),
+}
+
+KNIGHT_MOVES = [(2, 1), (1, 2), (-1, 2), (-2, 1), (-2, -1), (-1, -2), (1, -2), (2, -1)]
 
 
 class PettingZooChess(Env):
@@ -52,8 +72,8 @@ class PettingZooChess(Env):
             Standard chess rules apply. Move your pieces strategically to checkmate
             your opponent's king.
 
-            Action format: Provide an action number from 0 to 4671.
-            The action space encodes all possible moves as a flattened 8x8x73 array.
+            Action format: Provide a move in UCI notation (e.g., "e2e4", "g1f3").
+            For pawn promotion, append the piece letter (e.g., "e7e8q" for queen).
         """).strip()
         return {
             "player_0": base_description.format(player_id="0", color="white"),
@@ -65,8 +85,59 @@ class PettingZooChess(Env):
         return Observation(image=self.render(), text=None)
 
     def _get_pz_action(self, action: str) -> int:
-        """Convert action string to PettingZoo action."""
-        return int(action.strip())
+        """Convert UCI notation to PettingZoo action index."""
+        action = action.strip().lower()
+        move = chess.Move.from_uci(action)
+
+        from_square = move.from_square
+        to_square = move.to_square
+
+        from_row, from_col = from_square // 8, from_square % 8
+        to_row, to_col = to_square // 8, to_square % 8
+
+        delta_row = to_row - from_row
+        delta_col = to_col - from_col
+
+        # Check for knight move
+        if (abs(delta_row), abs(delta_col)) in [(2, 1), (1, 2)]:
+            for i, (dr, dc) in enumerate(KNIGHT_MOVES):
+                if delta_row == dr and delta_col == dc:
+                    move_type = 56 + i
+                    break
+        # Check for underpromotion
+        elif move.promotion and move.promotion != chess.QUEEN:
+            promo_piece = {chess.ROOK: 0, chess.BISHOP: 1, chess.KNIGHT: 2}[
+                move.promotion
+            ]
+            if delta_col == -1:
+                direction = 0  # left capture
+            elif delta_col == 0:
+                direction = 1  # straight
+            else:
+                direction = 2  # right capture
+            move_type = 64 + promo_piece * 3 + direction
+        # Queen-type move (including queen promotion)
+        else:
+            distance = max(abs(delta_row), abs(delta_col)) - 1
+            if delta_row > 0 and delta_col == 0:
+                direction = 0  # N
+            elif delta_row > 0 and delta_col > 0:
+                direction = 1  # NE
+            elif delta_row == 0 and delta_col > 0:
+                direction = 2  # E
+            elif delta_row < 0 and delta_col > 0:
+                direction = 3  # SE
+            elif delta_row < 0 and delta_col == 0:
+                direction = 4  # S
+            elif delta_row < 0 and delta_col < 0:
+                direction = 5  # SW
+            elif delta_row == 0 and delta_col < 0:
+                direction = 6  # W
+            else:
+                direction = 7  # NW
+            move_type = direction * 7 + distance
+
+        return from_row * 8 * 73 + from_col * 73 + move_type
 
     @override
     def inner_step(
