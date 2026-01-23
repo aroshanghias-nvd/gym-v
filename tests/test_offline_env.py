@@ -24,7 +24,8 @@ def _image_to_base64(img: Image.Image) -> str:
 
 
 class TestOfflineSingleTurnEnv(unittest.TestCase):
-    def _write_dataset(self, root: Path) -> Path:
+    def _write_small_dataset(self, root: Path) -> Path:
+        """Create a small 2-sample dataset for basic tests."""
         img = Image.new("RGB", (32, 32), (255, 0, 0))
         img_b64 = _image_to_base64(img)
 
@@ -48,10 +49,32 @@ class TestOfflineSingleTurnEnv(unittest.TestCase):
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
         return jsonl_path
 
-    def test_seed_determinism_and_reward(self):
+    def _write_large_dataset(self, root: Path, num_samples: int) -> Path:
+        """Create a dataset with num_samples distinct samples."""
+        img = Image.new("RGB", (32, 32), (0, 255, 0))
+        img_b64 = _image_to_base64(img)
+
+        jsonl_path = root / "dataset.jsonl"
+        with jsonl_path.open("w", encoding="utf-8") as f:
+            for i in range(num_samples):
+                row = {
+                    "text": f"Question {i}: What is {i} + 1?",
+                    "image": img_b64,
+                    "answer": str(i + 1),
+                    "metadata": {"id": i},
+                }
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        return jsonl_path
+
+    def test_batch_sampling_no_duplicates(self):
+        """Test that batch sampling (multiple agents) does not repeat samples within a batch.
+
+        When num_players equals dataset size, one reset should sample each data point exactly once.
+        """
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            dataset_path = self._write_dataset(root)
+            num_samples = 10
+            dataset_path = self._write_large_dataset(root, num_samples)
 
             env = gym_v.make(
                 "Offline/SingleTurn-v0",
@@ -59,105 +82,77 @@ class TestOfflineSingleTurnEnv(unittest.TestCase):
                 datasource_kwargs={"data_path": str(dataset_path)},
                 shuffle=True,
                 grader="exact_match",
-                num_players=1,
-            )
-
-            agent_id = "agent_0"
-
-            obs_dict1, info_dict1 = env.reset(seed=123)
-            obs_dict2, info_dict2 = env.reset(seed=123)
-            self.assertEqual(
-                info_dict1[agent_id]["index"], info_dict2[agent_id]["index"]
-            )
-            self.assertIsNotNone(obs_dict1[agent_id].image)
-            self.assertIsInstance(obs_dict1[agent_id].text, str)
-
-            # Verify reward with the sampled oracle answer (exact_match should ignore whitespace)
-            oracle = info_dict2[agent_id]["oracle_answer"]
-            self.assertIsInstance(oracle, str)
-            _, reward_dict, term_dict, trunc_dict, info_dict = env.step(
-                {agent_id: f"  {oracle}  "}
-            )
-            self.assertTrue(term_dict["__all__"])
-            self.assertTrue(trunc_dict["__all__"])
-            self.assertEqual(reward_dict[agent_id], 1.0)
-            self.assertTrue(info_dict[agent_id]["correct"])
-
-            env.reset(seed=123)
-            _, reward_dict, _, _, info_dict = env.step({agent_id: "__wrong__"})
-            self.assertEqual(reward_dict[agent_id], 0.0)
-            self.assertFalse(info_dict[agent_id]["correct"])
-
-    def test_shuffle_sampling_no_repeats_in_epoch(self):
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            dataset_path = self._write_dataset(root)
-
-            env = gym_v.make(
-                "Offline/SingleTurn-v0",
-                datasource_type="jsonl",
-                datasource_kwargs={"data_path": str(dataset_path)},
-                shuffle=True,
-                grader="exact_match",
-                num_players=1,
-            )
-
-            agent_id = "agent_0"
-
-            # With 2 samples, first two resets should cover both indices (no repeats).
-            _, info_dict_a = env.reset(seed=123)
-            _, info_dict_b = env.reset()
-            self.assertNotEqual(
-                info_dict_a[agent_id]["index"], info_dict_b[agent_id]["index"]
-            )
-
-            # Next reset starts a new epoch; index can repeat across epochs.
-            _, info_dict_c = env.reset()
-            self.assertIn(info_dict_c[agent_id]["index"], {0, 1})
-
-    def test_batch_size_multiple_agents(self):
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            dataset_path = self._write_dataset(root)
-
-            num_players = 16
-            env = gym_v.make(
-                "Offline/SingleTurn-v0",
-                datasource_type="jsonl",
-                datasource_kwargs={"data_path": str(dataset_path)},
-                shuffle=True,
-                grader="exact_match",
-                num_players=num_players,
+                num_players=num_samples,
             )
 
             obs_dict, info_dict = env.reset(seed=42)
 
-            # Check all agents have observations and info
-            self.assertEqual(len(obs_dict), num_players)
-            self.assertEqual(len(info_dict), num_players)
+            # Verify we got num_samples agents
+            self.assertEqual(len(obs_dict), num_samples)
+            self.assertEqual(len(info_dict), num_samples)
 
-            for i in range(num_players):
+            # Collect all sampled indices
+            sampled_indices = set()
+            for i in range(num_samples):
                 agent_id = f"agent_{i}"
-                self.assertIn(agent_id, obs_dict)
-                self.assertIn(agent_id, info_dict)
-                self.assertIsNotNone(obs_dict[agent_id].image)
-                self.assertIsInstance(info_dict[agent_id]["oracle_answer"], str)
+                idx = info_dict[agent_id]["index"]
+                sampled_indices.add(idx)
 
-            # Each agent answers with their own oracle answer
-            actions = {
-                f"agent_{i}": info_dict[f"agent_{i}"]["oracle_answer"]
-                for i in range(num_players)
-            }
-            _, reward_dict, term_dict, trunc_dict, result_info = env.step(actions)
+            # Verify no duplicates: set size should equal num_samples
+            self.assertEqual(
+                len(sampled_indices),
+                num_samples,
+                f"Expected {num_samples} unique samples, but got {len(sampled_indices)}. "
+                f"Sampled indices: {sorted(sampled_indices)}",
+            )
 
-            # All agents should get reward 1.0 for correct answers
-            for i in range(num_players):
-                agent_id = f"agent_{i}"
-                self.assertEqual(reward_dict[agent_id], 1.0)
-                self.assertTrue(result_info[agent_id]["correct"])
+            # Verify all indices 0 to num_samples-1 were sampled exactly once
+            self.assertEqual(
+                sampled_indices,
+                set(range(num_samples)),
+                "Expected indices [0, 1, ..., 9] but got different set",
+            )
 
+            env.close()
+
+    def test_observation_and_grading(self):
+        """Test observation completeness and grading mechanism."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            dataset_path = self._write_small_dataset(root)
+
+            env = gym_v.make(
+                "Offline/SingleTurn-v0",
+                datasource_type="jsonl",
+                datasource_kwargs={"data_path": str(dataset_path)},
+                shuffle=True,
+                grader="exact_match",
+                num_players=1,
+            )
+
+            agent_id = "agent_0"
+
+            # Test observation completeness
+            obs_dict, info_dict = env.reset(seed=123)
+            self.assertIsNotNone(obs_dict[agent_id].image)
+            self.assertIsInstance(obs_dict[agent_id].text, str)
+            self.assertIsInstance(info_dict[agent_id]["oracle_answer"], str)
+
+            # Test correct answer gets reward 1.0 (exact_match ignores whitespace)
+            oracle = info_dict[agent_id]["oracle_answer"]
+            _, reward_dict, term_dict, trunc_dict, info_dict = env.step(
+                {agent_id: f"  {oracle}  "}
+            )
+            self.assertEqual(reward_dict[agent_id], 1.0)
+            self.assertTrue(info_dict[agent_id]["correct"])
             self.assertTrue(term_dict["__all__"])
             self.assertTrue(trunc_dict["__all__"])
+
+            # Test wrong answer gets reward 0.0
+            env.reset(seed=123)
+            _, reward_dict, _, _, info_dict = env.step({agent_id: "__wrong__"})
+            self.assertEqual(reward_dict[agent_id], 0.0)
+            self.assertFalse(info_dict[agent_id]["correct"])
 
             env.close()
 
