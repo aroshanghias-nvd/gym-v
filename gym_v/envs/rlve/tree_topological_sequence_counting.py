@@ -398,7 +398,9 @@ You should output the number of valid permutations modulo {MOD}."""
             mid_x = (x1 + x2) / 2
             mid_y = (y1 + y2) / 2
             constraint_text = constraint
-            bbox = draw.textbbox((0, 0), constraint_text, font=constraint_font)
+
+            # Use anchor='mm' for center alignment
+            bbox = draw.textbbox((mid_x, mid_y), constraint_text, font=constraint_font, anchor='mm')
             tw = bbox[2] - bbox[0]
             th = bbox[3] - bbox[1]
 
@@ -406,20 +408,21 @@ You should output the number of valid permutations modulo {MOD}."""
             padding = 6
             draw.ellipse(
                 [
-                    mid_x - tw // 2 - padding,
-                    mid_y - th // 2 - padding,
-                    mid_x + tw // 2 + padding,
-                    mid_y + th // 2 + padding,
+                    bbox[0] - padding,
+                    bbox[1] - padding,
+                    bbox[2] + padding,
+                    bbox[3] + padding,
                 ],
                 fill=(255, 250, 240),
                 outline=(180, 160, 140),
                 width=2,
             )
             draw.text(
-                (mid_x - tw // 2, mid_y - th // 2),
+                (mid_x, mid_y),
                 constraint_text,
                 fill=(200, 60, 40),
                 font=constraint_font,
+                anchor='mm',
             )
 
         # Draw nodes

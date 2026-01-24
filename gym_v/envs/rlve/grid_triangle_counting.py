@@ -262,7 +262,7 @@ class RLVEGridTriangleCountingEnv(Env):
 
         # Extra space for title and footer
         title_height = 60
-        footer_height = 80
+        footer_height = 100
 
         width = padding * 2 + grid_width
         height = padding * 2 + title_height + grid_height + footer_height

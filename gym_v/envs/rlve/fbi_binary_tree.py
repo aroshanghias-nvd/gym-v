@@ -52,10 +52,10 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
 
     def __init__(
         self,
-        max_n: int = 5,
+        max_n: int = 4,
         probability_same_as_before: float = 0.7,
-        image_width: int = 1000,
-        image_height: int = 800,
+        base_image_width: int = 1000,
+        base_image_height: int = 800,
         num_players: int = 1,
         **kwargs: Any,
     ):
@@ -64,8 +64,8 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
         self._agent_ids = {f"agent_{i}" for i in range(num_players)}
         self._max_n = max_n
         self._probability_same_as_before = probability_same_as_before
-        self._image_width = image_width
-        self._image_height = image_height
+        self._base_image_width = base_image_width
+        self._base_image_height = base_image_height
 
         self._N: int | None = None
         self._string: str | None = None
@@ -250,11 +250,16 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
         """Render the FBI binary tree structure."""
         if self._string is None:
             return Image.new(
-                "RGB", (self._image_width, self._image_height), (255, 255, 255)
+                "RGB", (self._base_image_width, self._base_image_height), (255, 255, 255)
             )
 
+        # Dynamically adjust image size based on tree depth
+        num_leaves = 2 ** self._N
+        image_width = max(self._base_image_width, num_leaves * 70)
+        image_height = max(self._base_image_height, self._N * 150 + 300)
+
         # Create image with light background
-        img = Image.new("RGB", (self._image_width, self._image_height), (245, 248, 250))
+        img = Image.new("RGB", (image_width, image_height), (245, 248, 250))
         draw = ImageDraw.Draw(img)
 
         # Load fonts
@@ -275,7 +280,7 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
         bbox = draw.textbbox((0, 0), title, font=title_font)
         tw = bbox[2] - bbox[0]
         draw.text(
-            (self._image_width // 2 - tw // 2, 20),
+            (image_width // 2 - tw // 2, 20),
             title,
             fill=(40, 60, 80),
             font=title_font,
@@ -287,7 +292,7 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
         bbox = draw.textbbox((0, 0), string_text, font=string_font)
         tw = bbox[2] - bbox[0]
         draw.text(
-            (self._image_width // 2 - tw // 2, string_y),
+            (image_width // 2 - tw // 2, string_y),
             string_text,
             fill=(40, 60, 80),
             font=string_font,
@@ -295,7 +300,7 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
 
         # Build tree structure and compute positions
         tree_structure = self._build_fbi_tree_structure()
-        positions = self._compute_tree_positions(tree_structure)
+        positions = self._compute_tree_positions(tree_structure, image_width, image_height)
 
         # Draw edges first
         for node_info in tree_structure:
@@ -369,7 +374,7 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
             )
 
         # Add legend
-        legend_y = self._image_height - 100
+        legend_y = image_height - 100
         legend_x = 100
 
         # B-string example
@@ -439,7 +444,7 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
         bbox = draw.textbbox((0, 0), note, font=label_font)
         tw = bbox[2] - bbox[0]
         draw.text(
-            (self._image_width // 2 - tw // 2, self._image_height - 40),
+            (image_width // 2 - tw // 2, image_height - 40),
             note,
             fill=(100, 120, 140),
             font=label_font,
@@ -514,9 +519,14 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
         return result
 
     def _compute_tree_positions(
-        self, tree_structure: list[dict[str, Any]]
+        self, tree_structure: list[dict[str, Any]], image_width: int, image_height: int
     ) -> dict[int, tuple[float, float]]:
         """Compute positions for tree nodes using hierarchical layout.
+
+        Args:
+            tree_structure: List of node info dicts
+            image_width: Width of the image
+            image_height: Height of the image
 
         Returns dict mapping node_idx -> (x, y) coordinates.
         """
@@ -560,8 +570,8 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
         margin_top = 120
         margin_bottom = 140
         margin_x = 60
-        usable_height = self._image_height - margin_top - margin_bottom
-        usable_width = self._image_width - 2 * margin_x
+        usable_height = image_height - margin_top - margin_bottom
+        usable_width = image_width - 2 * margin_x
 
         for depth in range(max_depth + 1):
             nodes_at_depth = nodes_by_depth.get(depth, [])
@@ -571,7 +581,7 @@ Example: `{all_B_answer}` (do **NOT** include the backticks or quotes)."""
             num_nodes = len(nodes_at_depth)
             for i, node in enumerate(sorted(nodes_at_depth)):
                 if num_nodes == 1:
-                    x = self._image_width / 2
+                    x = image_width / 2
                 else:
                     x = margin_x + (i * usable_width / (num_nodes - 1))
                 positions[node] = (x, y)

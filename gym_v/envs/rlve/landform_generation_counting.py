@@ -307,7 +307,7 @@ Please count the number of **distinct sequences** `H[p[0]], H[p[1]], ..., H[p[{N
         terrain_height = 250
 
         # Overall image dimensions
-        legend_height = 180
+        legend_height = 220
         width = padding * 2 + terrain_width
         height = padding * 3 + terrain_height + legend_height
 

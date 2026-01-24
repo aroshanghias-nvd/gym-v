@@ -829,20 +829,6 @@ register(
 )
 
 register(
-    id="RLVE/KnightsAndKnaves-v0",
-    entry_point="gym_v.envs.rlve.knights_and_knaves:RLVEKnightsAndKnavesEnv",
-    max_episode_steps=1,
-    kwargs=dict(
-        N=3,
-        depth_constraint=2,
-        width_constraint=2,
-        image_width=1000,
-        image_height=800,
-        num_players=1,
-    ),
-)
-
-register(
     id="RLVE/LandformGenerationCounting-v0",
     entry_point="gym_v.envs.rlve.landform_generation_counting:RLVELandformGenerationCountingEnv",
     max_episode_steps=1,
@@ -897,20 +883,6 @@ register(
         max_a_b=100,
         cell_px=80,
         padding=32,
-        num_players=1,
-    ),
-)
-
-register(
-    id="RLVE/LightUpPuzzle-v0",
-    entry_point="gym_v.envs.rlve.light_up_puzzle:RLVELightUpPuzzleEnv",
-    max_episode_steps=1,
-    kwargs=dict(
-        max_n_m=3,
-        density_list=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95],
-        black_cell_density_range=(0.6, 0.95),
-        cell_px=48,
-        padding=24,
         num_players=1,
     ),
 )
@@ -1207,10 +1179,10 @@ register(
     entry_point="gym_v.envs.rlve.fbi_binary_tree:RLVEFbiBinaryTreeEnv",
     max_episode_steps=1,
     kwargs=dict(
-        max_n=5,
+        max_n=4,
         probability_same_as_before=0.7,
-        image_width=1000,
-        image_height=800,
+        base_image_width=1000,
+        base_image_height=800,
         num_players=1,
     ),
 )
@@ -1383,19 +1355,6 @@ register(
     max_episode_steps=1,
     kwargs=dict(
         max_n_m=8,
-        cell_px=56,
-        padding=24,
-        num_players=1,
-    ),
-)
-
-register(
-    id="RLVE/GridColoringCounting-v0",
-    entry_point="gym_v.envs.rlve.grid_coloring_counting:RLVEGridColoringCountingEnv",
-    max_episode_steps=1,
-    kwargs=dict(
-        max_n_m=6,
-        max_mod=10000,
         cell_px=56,
         padding=24,
         num_players=1,

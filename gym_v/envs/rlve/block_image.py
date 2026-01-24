@@ -443,15 +443,15 @@ The output is (do **NOT** include the backticks or quotes — use the format bel
                     min_x_screen = min(min_x_screen, x_screen)
                     min_y_screen = min(min_y_screen, y_screen)
 
-        width = int(max_x_screen - min_x_screen) + padding * 2 + cube_size
-        height = int(max_y_screen - min_y_screen) + padding * 2 + cube_size
+        width = int(max_x_screen - min_x_screen) + padding * 4 + cube_size * 2
+        height = int(max_y_screen - min_y_screen) + padding * 4 + cube_size * 2
 
         img = Image.new("RGB", (width, height), (245, 245, 250))
         draw = ImageDraw.Draw(img)
 
         # Offset to move origin
-        offset_x = -min_x_screen + padding
-        offset_y = height - padding
+        offset_x = -min_x_screen + padding * 2 + cube_size
+        offset_y = height - padding * 2 - cube_size
 
         # Function to convert 3D coordinates to screen coordinates
         def to_screen(x: float, z: float, y: float) -> tuple[float, float]:

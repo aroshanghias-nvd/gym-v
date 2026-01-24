@@ -8,7 +8,6 @@ from gym_v.envs.rlve.block_image import RLVEBlockImageEnv
 from gym_v.envs.rlve.campsite_puzzle import RLVECampsitePuzzleEnv
 from gym_v.envs.rlve.card_coloring_counting import RLVECardColoringCountingEnv
 from gym_v.envs.rlve.circulating_grid import RLVECirculatingGridEnv
-from gym_v.envs.rlve.coloring_counting import RLVEColoringCountingEnv
 from gym_v.envs.rlve.convex_hull import RLVEConvexHullEnv
 from gym_v.envs.rlve.eight_digit_puzzle import RLVEEightDigitPuzzleEnv
 from gym_v.envs.rlve.fbi_binary_tree import RLVEFbiBinaryTreeEnv
@@ -17,7 +16,6 @@ from gym_v.envs.rlve.graph_contain_tree_counting import (
 )
 from gym_v.envs.rlve.graph_isomorphism import RLVEGraphIsomorphismEnv
 from gym_v.envs.rlve.grid_bfs import RLVEGridBFSEnv
-from gym_v.envs.rlve.grid_coloring_counting import RLVEGridColoringCountingEnv
 from gym_v.envs.rlve.grid_component import RLVEGridComponentEnv
 from gym_v.envs.rlve.grid_local_minimum_counting import RLVEGridLocalMinimumCountingEnv
 from gym_v.envs.rlve.grid_parity_construction import RLVEGridParityConstructionEnv
@@ -28,12 +26,10 @@ from gym_v.envs.rlve.hamiltonian_path_existence import (
 )
 from gym_v.envs.rlve.hitori_puzzle import RLVEHitoriPuzzleEnv
 from gym_v.envs.rlve.klo_blocks import RLVEKloBlocksEnv
-from gym_v.envs.rlve.knights_and_knaves import RLVEKnightsAndKnavesEnv
 from gym_v.envs.rlve.landform_generation_counting import (
     RLVELandformGenerationCountingEnv,
 )
 from gym_v.envs.rlve.largest_convex_polygon import RLVELargestConvexPolygonEnv
-from gym_v.envs.rlve.light_up_puzzle import RLVELightUpPuzzleEnv
 from gym_v.envs.rlve.longest_path import RLVELongestPathEnv
 from gym_v.envs.rlve.magic_square_puzzle import RLVEMagicSquarePuzzleEnv
 from gym_v.envs.rlve.maximum_achromatic_number import (

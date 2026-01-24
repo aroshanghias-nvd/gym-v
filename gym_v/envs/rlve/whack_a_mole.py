@@ -331,7 +331,7 @@ You may swing the hammer multiple times, but you cannot change its size after ch
         grid_height = rows * cell_px
 
         # Space for hammer examples
-        hammer_legend_height = 120
+        hammer_legend_height = 140
 
         width = padding * 2 + grid_width
         height = padding * 3 + grid_height + hammer_legend_height

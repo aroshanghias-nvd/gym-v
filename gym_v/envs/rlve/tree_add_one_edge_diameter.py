@@ -482,10 +482,10 @@ Let's add **exactly one undirected edge** with weight {L} to the tree. Our goal 
             pos = nx.circular_layout(G)
 
         # Scale positions to image coordinates with margins
-        margin_x = 80
-        margin_y = 100
+        margin_x = 120
+        margin_y = 120
         width = self._image_width - 2 * margin_x
-        height = self._image_height - 2 * margin_y - 60
+        height = self._image_height - 2 * margin_y - 80
 
         scaled_pos = {}
         for node, (x, y) in pos.items():
