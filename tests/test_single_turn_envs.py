@@ -111,6 +111,7 @@ SPHINX_ENVS = {
 }
 
 RLVE_ENVS = {
+    "RLVE/AdditionTable-v0": "addition_table",
     "RLVE/BinaryTreeLeafNumExpectation-v0": "binary_tree_leaf_num_expectation",
     "RLVE/BinarioNoAdjacencyRequirement-v0": "binario_no_adjacency_requirement",
     "RLVE/FbiBinaryTree-v0": "fbi_binary_tree",
@@ -118,9 +119,12 @@ RLVE_ENVS = {
     "RLVE/CampsitePuzzle-v0": "campsite_puzzle",
     "RLVE/CardColoringCounting-v0": "card_coloring_counting",
     "RLVE/CirculatingGrid-v0": "circulating_grid",
+    "RLVE/CoinSquareGame-v0": "coin_square_game",
     "RLVE/ColoringCounting-v0": "coloring_counting",
     "RLVE/ConvexHull-v0": "convex_hull",
     "RLVE/EightDigitPuzzle-v0": "eight_digit_puzzle",
+    "RLVE/FaceRightWay-v0": "face_right_way",
+    "RLVE/GraMinimaGame-v0": "gra_minima_game",
     "RLVE/GraphContainTreeCounting-v0": "graph_contain_tree_counting",
     "RLVE/GridBFS-v0": "grid_bfs",
     "RLVE/GridComponent-v0": "grid_component",
@@ -130,6 +134,7 @@ RLVE_ENVS = {
     "RLVE/HamiltonianPath-v0": "hamiltonian_path",
     "RLVE/HamiltonianPathExistence-v0": "hamiltonian_path_existence",
     "RLVE/HitoriPuzzle-v0": "hitori_puzzle",
+    "RLVE/JugPuzzle-v0": "jug_puzzle",
     "RLVE/KloBlocks-v0": "klo_blocks",
     "RLVE/LandformGenerationCounting-v0": "landform_generation_counting",
     "RLVE/LargestConvexPolygon-v0": "largest_convex_polygon",
@@ -152,7 +157,15 @@ RLVE_ENVS = {
     "RLVE/MonochromeBlockCounting-v0": "monochrome_block_counting",
     "RLVE/NinePuzzle-v0": "nine_puzzle",
     "RLVE/Numbrix-v0": "numbrix",
+    "RLVE/PipelineArrangement-v0": "pipeline_arrangement",
+    "RLVE/PreorderTraversal-v0": "preorder_traversal",
     "RLVE/MagicSquarePuzzle-v0": "magic_square_puzzle",
+    "RLVE/MatrixPermutationBothDiagonalOne-v0": "matrix_permutation_both_diagonal_one",
+    "RLVE/MatrixPermutationMainDiagonalOne-v0": "matrix_permutation_main_diagonal_one",
+    "RLVE/MatrixPooling-v0": "matrix_pooling",
+    "RLVE/MatrixRmqCounting-v0": "matrix_rmq_counting",
+    "RLVE/MaxGridPathIntersection-v0": "max_grid_path_intersection",
+    "RLVE/MoneyChargingGame-v0": "money_charging_game",
     "RLVE/SmallestCircle-v0": "smallest_circle",
     "RLVE/TreeCenter-v0": "tree_center",
     "RLVE/TreeAddOneEdgeDiameter-v0": "tree_add_one_edge_diameter",
@@ -161,9 +174,20 @@ RLVE_ENVS = {
     "RLVE/TreeDistanceEqualTriadCounting-v0": "tree_distance_equal_triad_counting",
     "RLVE/TreeEvenPartitioning-v0": "tree_even_partitioning",
     "RLVE/TreeTopologicalSequenceCounting-v0": "tree_topological_sequence_counting",
+    "RLVE/RoundtableAssignment-v0": "roundtable_assignment",
+    "RLVE/TetrisAttack-v0": "tetris_attack",
     "RLVE/TwiddlePuzzle-v0": "twiddle_puzzle",
+    "RLVE/WarehouseConstruction-v0": "warehouse_construction",
     "RLVE/WeightedBinarytree-v0": "weighted_binarytree",
     "RLVE/WhackAMole-v0": "whack_a_mole",
+    "RLVE/QuantumLockPuzzle-v0": "quantum_lock_puzzle",
+    "RLVE/NewNimGame-v0": "new_nim_game",
+    "RLVE/Patrol-v0": "patrol",
+    "RLVE/StoneGame-v0": "stone_game",
+    "RLVE/StoneIntervalsGame-v0": "stone_intervals_game",
+    "RLVE/VisibleLine-v0": "visible_line",
+    "RLVE/SkaRockGarden-v0": "ska_rock_garden",
+    "RLVE/SpyNetwork-v0": "spy_network",
 }
 
 # Environments that use partial credit scoring (from reasoning-gym library)
@@ -245,8 +269,23 @@ PARTIAL_CREDIT_ENVS = {
         "max_wrong_reward": 1.0,  # Allow full credit for any valid optimal solution
         "allow_alternative_solutions": True,
     },
+    "RLVE/WarehouseConstruction-v0": {
+        "reason": "Optimization puzzle: minimizes warehouse + transport costs, scores by (gold/answer)^5",
+        "max_wrong_reward": 1.0,  # Allow full credit for any valid optimal solution
+        "allow_alternative_solutions": True,
+    },
     "RLVE/WeightedBinarytree-v0": {
         "reason": "Optimization puzzle: maximizes binary tree score, scores by (answer/gold)^5",
+        "max_wrong_reward": 1.0,  # Allow full credit for any valid optimal solution
+        "allow_alternative_solutions": True,
+    },
+    "RLVE/TetrisAttack-v0": {
+        "reason": "Optimization puzzle: minimizes swaps to clear array, scores by (gold/answer)^5",
+        "max_wrong_reward": 1.0,  # Allow full credit for any valid optimal solution
+        "allow_alternative_solutions": True,
+    },
+    "RLVE/SpyNetwork-v0": {
+        "reason": "Optimization puzzle: minimizes vertex cover cost in directed graph, scores by (gold/answer)^3",
         "max_wrong_reward": 1.0,  # Allow full credit for any valid optimal solution
         "allow_alternative_solutions": True,
     },

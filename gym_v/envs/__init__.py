@@ -789,6 +789,19 @@ register(
         num_players=1,
     ),
 )
+register(
+    id="RLVE/CoinSquareGame-v0",
+    entry_point="gym_v.envs.rlve.coin_square_game:RLVECoinSquareGameEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=10,
+        weight_multiple=2,
+        cell_px=70,
+        padding=24,
+        num_players=1,
+    ),
+)
+
 
 register(
     id="RLVE/EightDigitPuzzle-v0",
@@ -805,6 +818,18 @@ register(
 )
 
 register(
+    id="RLVE/FaceRightWay-v0",
+    entry_point="gym_v.envs.rlve.face_right_way:RLVEFaceRightWayEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=10,
+        cell_px=60,
+        padding=24,
+        num_players=1,
+    ),
+)
+
+register(
     id="RLVE/HitoriPuzzle-v0",
     entry_point="gym_v.envs.rlve.hitori_puzzle:RLVEHitoriPuzzleEnv",
     max_episode_steps=1,
@@ -812,6 +837,20 @@ register(
         max_n_m=4,
         cell_px=56,
         padding=24,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/JugPuzzle-v0",
+    entry_point="gym_v.envs.rlve.jug_puzzle:RLVEJugPuzzleEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_capacity_multiple=10,
+        operation_probabilities=None,
+        jug_width=80,
+        jug_height=200,
+        padding=40,
         num_players=1,
     ),
 )
@@ -883,6 +922,18 @@ register(
         max_a_b=100,
         cell_px=80,
         padding=32,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/GraMinimaGame-v0",
+    entry_point="gym_v.envs.rlve.gra_minima_game:RLVEGraMinimaGameEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        n=8,
+        cell_px=70,
+        padding=24,
         num_players=1,
     ),
 )
@@ -1162,6 +1213,17 @@ register(
 )
 
 register(
+    id="RLVE/AdditionTable-v0",
+    entry_point="gym_v.envs.rlve.addition_table:RLVEAdditionTableEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        min_n=3,
+        max_n=10,
+        num_players=1,
+    ),
+)
+
+register(
     id="RLVE/BinaryTreeLeafNumExpectation-v0",
     entry_point="gym_v.envs.rlve.binary_tree_leaf_num_expectation:RLVEBinaryTreeLeafNumExpectationEnv",
     max_episode_steps=1,
@@ -1258,6 +1320,31 @@ register(
 )
 
 register(
+    id="RLVE/PipelineArrangement-v0",
+    entry_point="gym_v.envs.rlve.pipeline_arrangement:RLVEPipelineArrangementEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=8,
+        cell_height=60,
+        cell_width=100,
+        padding=40,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/PreorderTraversal-v0",
+    entry_point="gym_v.envs.rlve.preorder_traversal:RLVEPreorderTraversalEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=7,
+        cell_px=80,
+        padding=40,
+        num_players=1,
+    ),
+)
+
+register(
     id="RLVE/MagicSquarePuzzle-v0",
     entry_point="gym_v.envs.rlve.magic_square_puzzle:RLVEMagicSquarePuzzleEnv",
     max_episode_steps=1,
@@ -1270,6 +1357,80 @@ register(
         num_players=1,
     ),
 )
+
+register(
+    id="RLVE/MatrixPermutationBothDiagonalOne-v0",
+    entry_point="gym_v.envs.rlve.matrix_permutation_both_diagonal_one:RLVEMatrixPermutationBothDiagonalOneEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        N=4,
+        cell_px=64,
+        padding=24,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/MatrixPermutationMainDiagonalOne-v0",
+    entry_point="gym_v.envs.rlve.matrix_permutation_main_diagonal_one:RLVEMatrixPermutationMainDiagonalOneEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        N=4,
+        cell_px=64,
+        padding=24,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/MatrixPooling-v0",
+    entry_point="gym_v.envs.rlve.matrix_pooling:RLVEMatrixPoolingEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n_m=7,
+        cell_px=56,
+        padding=24,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/MaxGridPathIntersection-v0",
+    entry_point="gym_v.envs.rlve.max_grid_path_intersection:RLVEMaxGridPathIntersectionEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        n=5,
+        cell_px=70,
+        padding=24,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/MatrixRmqCounting-v0",
+    entry_point="gym_v.envs.rlve.matrix_rmq_counting:RLVEMatrixRmqCountingEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        H_W_range=2,
+        max_MOD=1000000,
+        cell_px=48,
+        padding=24,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/MoneyChargingGame-v0",
+    entry_point="gym_v.envs.rlve.money_charging_game:RLVEMoneyChargingGameEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        n=5,
+        cell_px=60,
+        padding=32,
+        num_players=1,
+    ),
+)
+
 
 register(
     id="RLVE/BinarioNoAdjacencyRequirement-v0",
@@ -1459,6 +1620,48 @@ register(
 )
 
 register(
+    id="RLVE/RoundtableAssignment-v0",
+    entry_point="gym_v.envs.rlve.roundtable_assignment:RLVERoundtableAssignmentEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n_m=5,
+        wrong_format=-1.0,
+        invalid_solution=-0.5,
+        rewarding_strategy="(satisfied/all)^beta",
+        rewarding_weight=1.0,
+        rewarding_beta=5.0,
+        cell_px=100,
+        padding=40,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/WarehouseConstruction-v0",
+    entry_point="gym_v.envs.rlve.warehouse_construction:RLVEWarehouseConstructionEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        n=6,
+        cell_height=80,
+        cell_width=120,
+        padding=40,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/TetrisAttack-v0",
+    entry_point="gym_v.envs.rlve.tetris_attack:RLVETetrisAttackEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=8,
+        cell_px=60,
+        padding=24,
+        num_players=1,
+    ),
+)
+
+register(
     id="RLVE/WhackAMole-v0",
     entry_point="gym_v.envs.rlve.whack_a_mole:RLVEWhackAMoleEnv",
     max_episode_steps=1,
@@ -1467,6 +1670,115 @@ register(
         max_beat=3,
         cell_px=80,
         padding=24,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/StoneGame-v0",
+    entry_point="gym_v.envs.rlve.stone_game:RLVEStoneGameEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_sum=30,
+        pile_width=60,
+        pile_max_height=200,
+        padding=24,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/StoneIntervalsGame-v0",
+    entry_point="gym_v.envs.rlve.stone_intervals_game:RLVEStoneIntervalsGameEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=10,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/QuantumLockPuzzle-v0",
+    entry_point="gym_v.envs.rlve.quantum_lock_puzzle:RLVEQuantumLockPuzzleEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        operation_weights=[0.4, 0.4, 0.2],
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/NewNimGame-v0",
+    entry_point="gym_v.envs.rlve.new_nim_game:RLVENewNimGameEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        match_number_range_coefficient=2,
+        wrong_format=-1.0,
+        invalid_solution=-0.5,
+        unsuccessful_solution=-0.2,
+        rewarding_strategy="(gold/answer)^beta",
+        rewarding_weight=1.0,
+        rewarding_beta=3.0,
+        pile_width=100,
+        pile_height=300,
+        padding=40,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/Patrol-v0",
+    entry_point="gym_v.envs.rlve.patrol:RLVEPatrolEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=10,
+        node_radius=22,
+        image_size=800,
+        padding=60,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/VisibleLine-v0",
+    entry_point="gym_v.envs.rlve.visible_line:RLVEVisibleLineEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=10,
+        canvas_width=800,
+        canvas_height=600,
+        padding=60,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/SkaRockGarden-v0",
+    entry_point="gym_v.envs.rlve.ska_rock_garden:RLVESkaRockGardenEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=10,
+        cell_px=60,
+        padding=40,
+        num_players=1,
+    ),
+)
+
+register(
+    id="RLVE/SpyNetwork-v0",
+    entry_point="gym_v.envs.rlve.spy_network:RLVESpyNetworkEnv",
+    max_episode_steps=1,
+    kwargs=dict(
+        max_n=10,
+        edge_density=0.3,
+        dominated_probability=0.5,
+        wrong_format=-1.0,
+        invalid_solution=-0.5,
+        unsuccessful_solution=-0.3,
+        rewarding_strategy="(gold/answer)^beta",
+        rewarding_weight=1.0,
+        rewarding_beta=3.0,
+        padding=40,
         num_players=1,
     ),
 )
