@@ -13,6 +13,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description
 
 logger = get_logger()
 
@@ -38,16 +39,9 @@ GAME_RULES = dedent("""
     3. Any live cell with more than three live neighbors dies (overpopulation)
     4. Any dead cell with exactly three live neighbors becomes alive (reproduction)
 
-    In the image, black squares represent live cells, white squares represent dead cells, and the grid lines help visualize the cell boundaries.
+    Legend: In the image, black squares represent live cells, white squares represent dead cells, and the grid lines help visualize the cell boundaries.
 
     Coordinate System: In this grid, we use (row, col) coordinates where row increases from top to bottom (0 at top) and col increases from left to right (0 at left). For example, the top-left cell is at (0, 0), and the cell below it is at (1, 0).
-""").strip()
-
-ANSWER_FORMAT_PROMPT = dedent("""
-    **Answer Format:**
-    - For multiple choice: Reply with only the letter (A, B, C, D, E, F, G, or H)
-
-    Do not include any explanation or extra text.
 """).strip()
 
 
@@ -139,13 +133,13 @@ class GameRLLifegameQAEnv(Env):
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = GAME_RULES + "\n\n**Question:** " + self._question
-
-        if self._options:
-            desc += "\n\nOptions:\n" + "\n".join(self._options)
-
-        desc += ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Game of Life",
+            rules=GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Game of Life state.
@@ -200,22 +194,39 @@ Grid (#=alive, .=dead):
             f"Reset Lifegame QA (type={self._question_type_idx}, grid={self._grid_size}x{self._grid_size})."
         )
 
+        text_state = self._get_state_text()
+
         obs = Observation(
             image=self.render(),
-            text=self._get_state_text(),
+            text=text_state,
             metadata={
+                "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
-                "question_type": self.QUESTION_TYPES[self._question_type_idx][
-                    "name"
-                ],
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
                 "level": self.QUESTION_TYPES[self._question_type_idx]["level"],
             },
         )
-        info = {"oracle_answer": self._oracle_answer}
+        info = {
+            "seed": seed,
+            "oracle_answer": self._oracle_answer,
+            "question_type": self.QUESTION_TYPES[self._question_type_idx]["id"],
+        }
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
         }
+
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return 1.0 if self._check_answer(answer) else 0.0
 
     def inner_step(
         self, action: dict[str, str]
@@ -235,10 +246,9 @@ Grid (#=alive, .=dead):
 
         user_answer = action_str.strip().upper()
 
-        # Normalize answer
-        correct = self._check_answer(user_answer)
-
-        reward = 1.0 if correct else 0.0
+        # Check answer
+        reward = self._score_answer(user_answer)
+        correct = reward == 1.0
 
         obs = Observation(
             image=self.render(),

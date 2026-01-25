@@ -13,6 +13,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description
 
 logger = get_logger()
 
@@ -27,14 +28,6 @@ GAME_RULES_TEMPLATE = dedent("""
     The board uses a coordinate system where the top-left cell corresponds to (0,0), and the rows and columns are numbered starting from 0.
 
     Please use the provided board configuration and logical reasoning to deduce the correct answers to the following questions:
-""").strip()
-
-ANSWER_FORMAT_PROMPT = dedent("""
-    **Answer Format:**
-    - For numbers: Reply with only the number, e.g., 7
-    - For multiple choice: Reply with only the letter (A, B, C, D, E, or F)
-
-    Do not include any explanation or extra text.
 """).strip()
 
 
@@ -54,43 +47,43 @@ class GameRLMinesweeperQAEnv(Env):
     # Question types
     QUESTION_TYPES = [
         {
-            "id": "type_0",
-            "name": "flagged_count",
+            "id": "flagged_count",
+            "name": "Flagged Count",
             "level": "Easy",
             "answer_format": "fill_in_blank",
             "qa_type": "StateInfo",
         },
         {
-            "id": "type_1",
-            "name": "remaining_mines",
+            "id": "remaining_mines",
+            "name": "Remaining Mines",
             "level": "Easy",
             "answer_format": "fill_in_blank",
             "qa_type": "StateInfo",
         },
         {
-            "id": "type_2",
-            "name": "revealed_count",
+            "id": "revealed_count",
+            "name": "Revealed Count",
             "level": "Easy",
             "answer_format": "fill_in_blank",
             "qa_type": "StateInfo",
         },
         {
-            "id": "type_3",
-            "name": "cell_state",
+            "id": "cell_state",
+            "name": "Cell State",
             "level": "Easy",
             "answer_format": "multiple_choice",
             "qa_type": "StateInfo",
         },
         {
-            "id": "type_4",
-            "name": "reveal_outcome",
+            "id": "reveal_outcome",
+            "name": "Reveal Outcome",
             "level": "Hard",
             "answer_format": "multiple_choice",
             "qa_type": "StrategyOptimization",
         },
         {
-            "id": "type_5",
-            "name": "best_move",
+            "id": "best_move",
+            "name": "Best Move",
             "level": "Hard",
             "answer_format": "multiple_choice",
             "qa_type": "StrategyOptimization",
@@ -154,15 +147,17 @@ class GameRLMinesweeperQAEnv(Env):
     def description(self) -> str:
         """Return game rules + current question + answer format."""
         game_rules = GAME_RULES_TEMPLATE.format(
-            rows=self._rows, cols=self._cols, mines=self._mines
+            rows=self._rows,
+            cols=self._cols,
+            mines=self._mines,
         )
-        desc = game_rules + "\n\n**Question:** " + self._question
-
-        if self._options:
-            desc += "\n\n**Options:**\n" + "\n".join(self._options)
-
-        desc += ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Minesweeper",
+            rules=game_rules,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Minesweeper game state.
@@ -231,23 +226,40 @@ Grid (#=unrevealed, F=flagged, .=revealed empty, 1-8=numbers, M=mine):
             f"difficulty={self._difficulty}, grid={self._rows}x{self._cols})."
         )
 
+        text_state = self._get_state_text()
+
         obs = Observation(
             image=self.render(),
-            text=self._get_state_text(),
+            text=text_state,
             metadata={
+                "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
-                "question_type": self.QUESTION_TYPES[self._question_type_idx][
-                    "name"
-                ],
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
                 "level": self.QUESTION_TYPES[self._question_type_idx]["level"],
                 "difficulty": self._difficulty,
             },
         )
-        info = {"oracle_answer": self._oracle_answer}
+        info = {
+            "seed": seed,
+            "oracle_answer": self._oracle_answer,
+            "question_type": self.QUESTION_TYPES[self._question_type_idx]["id"],
+        }
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
         }
+
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return 1.0 if self._check_answer(answer) else 0.0
 
     def inner_step(
         self, action: dict[str, str]
@@ -267,10 +279,9 @@ Grid (#=unrevealed, F=flagged, .=revealed empty, 1-8=numbers, M=mine):
 
         user_answer = action_str.strip().upper()
 
-        # Normalize answer
-        correct = self._check_answer(user_answer)
-
-        reward = 1.0 if correct else 0.0
+        # Check answer
+        reward = self._score_answer(user_answer)
+        correct = reward == 1.0
 
         obs = Observation(
             image=self.render(),

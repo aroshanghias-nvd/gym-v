@@ -21,6 +21,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
 
 logger = get_logger()
 
@@ -712,21 +713,16 @@ class GameRLChessRangerQAEnv(Env):
         self._fen = None
         self._board = None
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Provide your answer directly. For multiple choice, respond with the letter(s) only.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = self.GAME_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for opt in self._options:
-                desc += f"{opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Chess Ranger",
+            rules=self.GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current chess board state."""
@@ -783,6 +779,7 @@ class GameRLChessRangerQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -800,6 +797,17 @@ class GameRLChessRangerQAEnv(Env):
             agent_id: info for agent_id in self._agent_ids
         }
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, self._oracle_answer)
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -812,13 +820,9 @@ class GameRLChessRangerQAEnv(Env):
         agent_id = next(iter(self._agent_ids))
         action_str = action[agent_id]
 
-        # Normalize answer
-        answer_normalized = action_str.strip().lower()
-        correct_answer = self._oracle_answer.strip().lower()
-
         # Check if correct
-        correct = answer_normalized == correct_answer
-        reward = 1.0 if correct else 0.0
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         # Generate response
         if correct:
@@ -834,7 +838,11 @@ class GameRLChessRangerQAEnv(Env):
 
         terminated = True
         truncated = False
-        info = {}
+        info = {
+            "oracle_answer": self._oracle_answer,
+            "user_answer": action_str,
+            "correct": correct,
+        }
 
         return (
             {agent_id: obs for agent_id in self._agent_ids},
@@ -933,12 +941,22 @@ class GameRLChessRangerQAEnv(Env):
         position_str = convert_to_chess_notation(random_row, random_col)
 
         # Generate multiple choice options
-        option_values = ["Pawn", "Rook", "Knight", "Bishop", "Queen", "King", "No Piece"]
+        option_values = [
+            "Pawn",
+            "Rook",
+            "Knight",
+            "Bishop",
+            "Queen",
+            "King",
+            "No Piece",
+        ]
         answer_index = option_values.index(piece_at_position)
         letters = ["A", "B", "C", "D", "E", "F", "G"]
 
         self._question = f"What piece is at {position_str}?"
-        self._options = [f"{letters[i]}. {option_values[i]}" for i in range(len(option_values))]
+        self._options = [
+            f"{letters[i]}. {option_values[i]}" for i in range(len(option_values))
+        ]
         self._oracle_answer = letters[answer_index]
 
     def _generate_predict_solvable_question(self) -> None:
@@ -990,5 +1008,7 @@ class GameRLChessRangerQAEnv(Env):
         answer_letters = "".join([letters[i] for i in sorted(answer_indices)])
 
         self._question = "Which of the following moves will lead to a state that can still be solved successfully?"
-        self._options = [f"{letters[i]}. {option_moves[i]}" for i in range(len(option_moves))]
+        self._options = [
+            f"{letters[i]}. {option_moves[i]}" for i in range(len(option_moves))
+        ]
         self._oracle_answer = answer_letters

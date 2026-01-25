@@ -15,6 +15,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description
 
 logger = get_logger()
 
@@ -56,14 +57,6 @@ GAME_RULES = dedent("""
 
     # Scoring
     The score equals the total number of beans eaten by Pac-Man
-""").strip()
-
-ANSWER_FORMAT_PROMPT = dedent("""
-    **Answer Format:**
-    - For multiple choice: Reply with only the letter (A, B, C, etc.)
-    - For numbers: Reply with only the number
-
-    Do not include any explanation or extra text.
 """).strip()
 
 
@@ -112,71 +105,71 @@ class GameRLPacmanQAEnv(Env):
     # Question types
     QUESTION_TYPES = [
         {
-            "id": "type_0",
-            "name": "pacman_position",
+            "id": "pacman_position",
+            "name": "Pacman Position",
             "level": "Easy",
             "answer_format": "multiple_choice",
             "qa_type": "StateInfo",
         },
         {
-            "id": "type_1",
-            "name": "bean_count_5x5",
+            "id": "bean_count_5x5",
+            "name": "Bean Count in 5x5",
             "level": "Easy",
             "answer_format": "fill_in_blank",
             "qa_type": "StateInfo",
         },
         {
-            "id": "type_2",
-            "name": "closer_ghost",
+            "id": "closer_ghost",
+            "name": "Closer Ghost",
             "level": "Easy",
             "answer_format": "multiple_choice",
             "qa_type": "StateInfo",
         },
         {
-            "id": "type_3",
-            "name": "beans_in_direction",
+            "id": "beans_in_direction",
+            "name": "Beans in Direction",
             "level": "Easy",
             "answer_format": "fill_in_blank",
             "qa_type": "ActionOutcome",
         },
         {
-            "id": "type_4",
-            "name": "movement_result",
+            "id": "movement_result",
+            "name": "Movement Result",
             "level": "Hard",
             "answer_format": "multiple_choice",
             "qa_type": "ActionOutcome",
         },
         {
-            "id": "type_5",
-            "name": "pinky_direction_change",
+            "id": "pinky_direction_change",
+            "name": "Pinky Direction Change",
             "level": "Medium",
             "answer_format": "multiple_choice",
             "qa_type": "ActionOutcome",
         },
         {
-            "id": "type_6",
-            "name": "blinky_direction_change",
+            "id": "blinky_direction_change",
+            "name": "Blinky Direction Change",
             "level": "Medium",
             "answer_format": "multiple_choice",
             "qa_type": "ActionOutcome",
         },
         {
-            "id": "type_7",
-            "name": "pinky_next_move",
+            "id": "pinky_next_move",
+            "name": "Pinky Next Move",
             "level": "Medium",
             "answer_format": "multiple_choice",
             "qa_type": "TransitionPath",
         },
         {
-            "id": "type_8",
-            "name": "blinky_next_move",
+            "id": "blinky_next_move",
+            "name": "Blinky Next Move",
             "level": "Medium",
             "answer_format": "multiple_choice",
             "qa_type": "TransitionPath",
         },
         {
-            "id": "type_9",
-            "name": "optimal_direction",
+            "id": "optimal_direction",
+            "name": "Optimal Direction",
             "level": "Hard",
             "answer_format": "multiple_choice",
             "qa_type": "StrategyOptimization",
@@ -253,13 +246,13 @@ class GameRLPacmanQAEnv(Env):
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = GAME_RULES + "\n\n**Question:** " + self._question
-
-        if self._options:
-            desc += "\n\n**Options:**\n" + "\n".join(self._options)
-
-        desc += ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Pacman",
+            rules=GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def reset(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
@@ -302,21 +295,24 @@ class GameRLPacmanQAEnv(Env):
 
         logger.info(f"Reset Pacman QA (type={self._question_type_idx}).")
 
+        text_state = self._get_state_text()
+
         obs = Observation(
             image=self.render(),
-            text=self._get_state_text(),
+            text=text_state,
             metadata={
+                "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
-                "question_type": self.QUESTION_TYPES[self._question_type_idx][
-                    "name"
-                ],
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
                 "level": self.QUESTION_TYPES[self._question_type_idx]["level"],
             },
         )
         info = {
+            "seed": seed,
             "oracle_answer": self._oracle_answer,
-            "question_type": self._question_type_idx,
+            "question_type": self.QUESTION_TYPES[self._question_type_idx]["id"],
         }
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
@@ -342,9 +338,7 @@ class GameRLPacmanQAEnv(Env):
             image=self.render(),
             text=None,
             metadata={
-                "question_type": self.QUESTION_TYPES[self._question_type_idx][
-                    "name"
-                ],
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
             },
         )
         info = {
@@ -372,9 +366,7 @@ class GameRLPacmanQAEnv(Env):
 
     def _score_answer(self, answer: str) -> float:
         """Score the answer based on answer format."""
-        answer_format = self.QUESTION_TYPES[self._question_type_idx][
-            "answer_format"
-        ]
+        answer_format = self.QUESTION_TYPES[self._question_type_idx]["answer_format"]
 
         if answer_format == "multiple_choice":
             match = re.search(r"[A-H]", answer.upper())

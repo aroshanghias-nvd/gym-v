@@ -10,6 +10,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
 
 logger = get_logger()
 
@@ -90,7 +91,7 @@ class GameRLRhythmGameQAEnv(Env):
         - Snake blocks: pink head + blue body + grey tail
           Score = length * (2*length + 7)
           Must click ALL cells of the snake to score
-        - Coordinates: (row, col) with row 1 at bottom, col 1 at left
+        - Coordinates: (row, col) with row and column indexes begin from 1; row 1 is at bottom and col 1 is at left (bottom-left is (1, 1))
     """).strip()
 
     def __init__(
@@ -125,22 +126,16 @@ class GameRLRhythmGameQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Reply with only the answer (number or option number).
-        For multiple choice: 1, 2, 3, etc. For numbers: 42, 100, etc.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = self.GAME_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for i, opt in enumerate(self._options):
-                desc += f"{i+1}. {opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Rhythm Game",
+            rules=self.GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current rhythm game state."""
@@ -211,6 +206,7 @@ class GameRLRhythmGameQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -228,6 +224,17 @@ class GameRLRhythmGameQAEnv(Env):
             agent_id: info for agent_id in self._agent_ids
         }
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, self._oracle_answer)
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -241,18 +248,16 @@ class GameRLRhythmGameQAEnv(Env):
         action_str = action[agent_id]
 
         info: dict[str, Any] = {}
-        reward = 0.0
         terminated = True
         truncated = False
 
         # Check answer
-        correct = action_str.strip().lower() == self._oracle_answer.strip().lower()
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         if correct:
-            reward = 1.0
             response = "Correct!"
         else:
-            reward = 0.0
             response = f"Incorrect. The correct answer is: {self._oracle_answer}"
 
         info = {

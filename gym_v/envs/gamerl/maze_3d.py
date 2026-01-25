@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_number_choice
 
 logger = get_logger()
 
@@ -123,6 +124,7 @@ class GameRL3dMazeQAEnv(Env):
         self._sequence_points: list[SequencePoint] = []
 
         # Question data (standard QA variables)
+        self._question_type_idx: int = 0
         self._question: str = ""
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
@@ -143,27 +145,16 @@ class GameRL3dMazeQAEnv(Env):
         and climbing ladders when available.
     """).strip()
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Reply with only the answer (number or option number).
-
-        Examples:
-        - For multiple choice: 1, 2, 3, etc.
-        - For numbers: 42, 100, etc.
-
-        Do not include any explanation or extra text.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = self.GAME_RULES + "\n\n**Question:** " + self._question
-
-        if self._options:
-            desc += "\n\n**Options:**\n" + "\n".join(self._options)
-
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="3D Maze",
+            rules=self.GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current 3D Maze game state.
@@ -215,32 +206,34 @@ Goal: ({self._goal_pos.x if self._goal_pos else 'N/A'}, {self._goal_pos.y if sel
 
         # Select question type (convert 0-based index to question type ID)
         if self._question_type_param is None:
-            self._selected_question_type = random.choice(
-                [qt["id"] for qt in self.QUESTION_TYPES]
-            )
+            self._question_type_idx = random.randint(0, len(self.QUESTION_TYPES) - 1)
         else:
             # Validate question type index
             if not (0 <= self._question_type_param < len(self.QUESTION_TYPES)):
                 raise ValueError(
                     f"Invalid question type index: {self._question_type_param}"
                 )
-            # Convert 0-based index to question type ID
-            self._selected_question_type = self.QUESTION_TYPES[
-                self._question_type_param
-            ][
-                "id"
-            ]
+            self._question_type_idx = self._question_type_param
+        # Convert 0-based index to question type ID
+        self._selected_question_type = self.QUESTION_TYPES[self._question_type_idx][
+            "id"
+        ]
 
         # Generate maze and question
         self._generate_maze_and_question()
 
+        text_state = self._get_state_text()
+
         obs = Observation(
             image=self.render(),
-            text=self._get_state_text(),
+            text=text_state,
             metadata={
+                "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
-                "question_type": self._selected_question_type,
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
+                "level": self.QUESTION_TYPES[self._question_type_idx]["level"],
             },
         )
 
@@ -249,6 +242,7 @@ Goal: ({self._goal_pos.x if self._goal_pos else 'N/A'}, {self._goal_pos.y if sel
         )
 
         info = {
+            "seed": seed,
             "oracle_answer": self._oracle_answer,
             "question_type": self._selected_question_type,
         }
@@ -257,8 +251,8 @@ Goal: ({self._goal_pos.x if self._goal_pos else 'N/A'}, {self._goal_pos.y if sel
             agent_id: info for agent_id in self._agent_ids
         }
 
-    def _generate_maze_and_question(self):
-        """Generate the maze and corresponding question."""
+    def _generate_maze_and_question(self) -> None:
+        """Generate the maze structure and corresponding question based on question type."""
         if self._selected_question_type == "path_finding":
             self._generate_path_finding_question()
         elif self._selected_question_type == "sequence_finding":
@@ -512,7 +506,10 @@ Goal: ({self._goal_pos.x if self._goal_pos else 'N/A'}, {self._goal_pos.y if sel
         labels = [sp.label for sp in self._sequence_points]
         self._options = [correct_sequence]
 
-        while len(self._options) < 8:
+        max_attempts = 100
+        attempts = 0
+        while len(self._options) < 8 and attempts < max_attempts:
+            attempts += 1
             shuffled_labels = labels.copy()
             random.shuffle(shuffled_labels)
             wrong_sequence = (
@@ -684,6 +681,17 @@ Goal: ({self._goal_pos.x if self._goal_pos else 'N/A'}, {self._goal_pos.y if sel
             f"This makes the answer Option {correct_option}."
         )
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_number_choice(answer, self._oracle_answer)
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -698,16 +706,13 @@ Goal: ({self._goal_pos.x if self._goal_pos else 'N/A'}, {self._goal_pos.y if sel
         action_str = action[agent_id]
 
         action_str = action_str.strip()
-        correct = action_str == self._oracle_answer
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         if correct:
             response = f"Correct! {self._analysis}"
-            reward = 1.0
         else:
-            response = (
-                f"Incorrect. The correct answer is: {self._oracle_answer}\n\n{self._analysis}"
-            )
-            reward = 0.0
+            response = f"Incorrect. The correct answer is: {self._oracle_answer}\n\n{self._analysis}"
 
         obs = Observation(
             image=self.render(),

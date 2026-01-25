@@ -22,15 +22,19 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
-from gym_v import Env, Observation
+from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
+
+logger = get_logger()
 
 GAME_RULES = dedent("""
-    Now I'll give you a picture, which shows a screenshot of Ultra TicTacToe. The introduction of Ultra TicTacToe is as follows:
-1. Board and coordinate representation: In this game, the board is divided into 9 3*3 squares(called Nine-grids). At the same time, we use $(i, j, row, col)$ to represent the coordinates of a cell: $(i, j)$ represents the coordinates of the Nine-grid; $(row, col)$ represents the coordinate of the cell within the Nine-grid; $i, j, row, col$ all range from 1 to 3. Two players take turns placing pieces on the board to mark the cells on the board, with the first player using "X" and the second player using "O" (this is the same as traditional TicTacToe).
-2. Rules for placing chess pieces: After the game starts, the first player places a chess piece in any cell in the Nine-grid in the middle (i.e., the Nine-grid (2, 2)). After that, the coordinates of each chess piece placed in the Nine-grid are the same as the coordinates of the Nine-grid in which the opponent's last chess piece was placed; for example, if the first player places a chess piece at the coordinates (2, 2, 3, 1) in the first step, then the second player needs to choose a chess piece in the nine-square grid (3, 1) in the second step.
-3. Scoring rules: For each player, each "Straight" (i.e., three identical chess pieces connected in a line, such as in the same row, the same column, or a diagonal line) in each Nine-grid is counted as 1 point. More than 1 point can be counted in each Nine-grid.
-
-Now I will give you a question about the game. Please extract information from the picture I give you, think carefully, reason, and answer:
+    Ultra TicTacToe Rules:
+    1. Board structure: The board is a 3x3 grid of 3x3 sub-boards (Nine-grids), totaling 81 cells.
+    2. Coordinates: A cell is addressed as (i, j, row, col) where (i, j) is the Nine-grid (1-3) and (row, col) is the cell within that Nine-grid (1-3). The top-left Nine-grid is (1, 1) and the top-left cell within a Nine-grid is (1, 1).
+    3. Turns: Players alternate placing X and O; X goes first.
+    4. Placement rule: The next player's Nine-grid is determined by the (row, col) of the previous move.
+    5. Scoring: Each three-in-a-row within a Nine-grid scores 1 point; multiple lines in the same grid can score.
+    6. Legend: X and O indicate placed pieces; empty cells are blank.
 """).strip()
 
 
@@ -445,23 +449,17 @@ class GameRLUltraTicTacToeQAEnv(Env):
         self._question: str = ""
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
-        self._question = None
-
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Provide your answer directly. For multiple choice, respond with the letter only.
-    """).strip()
 
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = GAME_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for opt in self._options:
-                desc += f"{opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Ultimate Tic-Tac-Toe",
+            rules=GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Ultra TicTacToe game state.
@@ -559,6 +557,7 @@ class GameRLUltraTicTacToeQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -677,12 +676,16 @@ class GameRLUltraTicTacToeQAEnv(Env):
 
         coord_str = trans_coord_to_str(nine_grid, position)
         options = ["First Player", "Second Player", "Not Marked"]
-        option_list = " ".join([f"{i+1}. {option}" for i, option in enumerate(options)])
 
         question = f"Which player marked the cell at {coord_str} in the image?"
         analysis = f"{process} So, the option number is {option_number}."
 
-        return {"question": question, "answer": option_number, "options": options, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": option_number,
+            "options": options,
+            "analysis": analysis,
+        }
 
     def _generate_question_type_2(self) -> dict[str, Any]:
         """Type 2: Given opponent's last move, how many possible next coordinates?
@@ -732,15 +735,17 @@ class GameRLUltraTicTacToeQAEnv(Env):
 
         # Generate options
         options_made = [str(num) for num in range(0, 10)]
-        option_list = " ".join(
-            [f"{i+1}. {option}" for i, option in enumerate(options_made)]
-        )
         option_number = str(options_made.index(str(coord_avail_num)) + 1)
 
         question = f"Now your opponent place a piece at {last_piece_coord}. What is the number of possible coordinates of your next step?"
         analysis = f"Since the opponent placed a piece at {last_piece_coord}, our next step should be in the Nine-grid ({next_i}, {next_j}). In this nine grid, we can see that {str_coords_marked_by_X} are marked by the First Player, while {str_coords_marked_by_O} are marked by the Second Player. So, the possible coordinates are the rest cells in the Nine-grid, being {coord_avail_list_str}. This means there are {coord_avail_num} available coordinate(s), so the option number is {option_number}."
 
-        return {"question": question, "answer": option_number, "options": options_made, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": option_number,
+            "options": options_made,
+            "analysis": analysis,
+        }
 
     def _generate_question_type_3(self) -> dict[str, Any]:
         """Type 3: How many middle cells are marked?
@@ -779,14 +784,16 @@ class GameRLUltraTicTacToeQAEnv(Env):
         # Generate options
         options_made = [str(num) for num in range(0, 10)]
         option_number = str(options_made.index(str(marked_middle_cell_num)) + 1)
-        option_list = " ".join(
-            [f"{i+1}. {option}" for i, option in enumerate(options_made)]
-        )
 
         question = "How many middle cells in the image are marked?"
         analysis = f"We check the middle cells in the Nine-grids one by one.\n{chr(10).join(counting_process)}\nSo there are {marked_middle_cell_num} middle cell(s) marked, the option number is {option_number}."
 
-        return {"question": question, "answer": option_number, "options": options_made, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": option_number,
+            "options": options_made,
+            "analysis": analysis,
+        }
 
     def _generate_question_type_4(self) -> dict[str, Any]:
         """Type 4: How many pieces are there in total?
@@ -854,14 +861,16 @@ class GameRLUltraTicTacToeQAEnv(Env):
         random.shuffle(options_made)
 
         option_number = str(options_made.index(str(total_piece_count)) + 1)
-        option_list = " ".join(
-            [f"{i+1}. {option}" for i, option in enumerate(options_made)]
-        )
 
         question = "How many pieces are there in the image?"
         analysis = f"We count the number of chess pieces in the Nine-grids one by one. {chr(10).join(counting_process)} So there are {adding_process} = {total_piece_count} pieces, the option number is {option_number}."
 
-        return {"question": question, "answer": option_number, "options": options_made, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": option_number,
+            "options": options_made,
+            "analysis": analysis,
+        }
 
     def _generate_question_type_5(self) -> dict[str, Any]:
         """Type 5: How many points has a player got in a Nine-grid?
@@ -907,14 +916,16 @@ class GameRLUltraTicTacToeQAEnv(Env):
         random.shuffle(options_made)
 
         option_number = str(options_made.index(str(point)) + 1)
-        option_list = " ".join(
-            [f"{i+1}. {option}" for i, option in enumerate(options_made)]
-        )
 
         question = f"How many points has the {player_name} got within the Nine-grid {nine_grid}?"
         analysis = f"The {player_name} uses {piece_type} pieces. We count the points in the order of rows, columns, and diagonals. We can see that in Nine-grid {nine_grid}, there are {point_row} point(s) in rows, {point_col} point(s) in columns, and {point_diag} point(s) in diagonals, which is {point} point(s) in total. So, the option number is {option_number}."
 
-        return {"question": question, "answer": option_number, "options": options_made, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": option_number,
+            "options": options_made,
+            "analysis": analysis,
+        }
 
     def _generate_question_type_6(self) -> dict[str, Any]:
         """Type 6: In which Nine-grid should you place the next piece?
@@ -998,14 +1009,16 @@ class GameRLUltraTicTacToeQAEnv(Env):
             f"Nine-grid ({x}, {y})" for x in range(1, 4) for y in range(1, 4)
         ]
         option_number = str(options_made.index(answer) + 1)
-        option_list = " ".join(
-            [f"{i+1}. {option}" for i, option in enumerate(options_made)]
-        )
 
         question = f"If you are {player_name}, from the image, we can see now it's your turn to place a piece. According to the rules of the game, in which Nine-grid should you place the next piece?"
         analysis = f"Since we are the {player_name} now, we use the {piece_type} piece. First, we need to count the number of {piece_type} pieces in each Nine-grid.\n{chr(10).join(counting_process_of_your_piece)}\nThen, we need to count the number of {other_piece_type} pieces in each position of every Nine-grid.\n{chr(10).join(counting_process_of_the_other_piece)}\nSo the quantitative differences corresponding to these coordinates are {', '.join([str(diff) for diff in diff_piece_num])} respectively.\nFrom this difference, {supp_for_X}we can tell that our next step should be in {answer}, which means the option number is {option_number}."
 
-        return {"question": question, "answer": option_number, "options": options_made, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": option_number,
+            "options": options_made,
+            "analysis": analysis,
+        }
 
     def _generate_question_type_7(self) -> dict[str, Any]:
         """Type 7: At which coordinate to place next piece for highest point?
@@ -1078,6 +1091,17 @@ class GameRLUltraTicTacToeQAEnv(Env):
 
         return {"question": question, "answer": max_coord, "analysis": analysis}
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, self._oracle_answer)
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -1102,8 +1126,8 @@ class GameRLUltraTicTacToeQAEnv(Env):
         action_str = action[agent_id]
 
         # Check answer
-        correct = action_str.strip() == self._oracle_answer.strip()
-        reward = 1.0 if correct else 0.0
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         # Generate response
         if correct:
@@ -1115,7 +1139,11 @@ class GameRLUltraTicTacToeQAEnv(Env):
 
         terminated = True
         truncated = False
-        info = {}
+        info = {
+            "oracle_answer": self._oracle_answer,
+            "user_answer": action_str,
+            "correct": correct,
+        }
 
         return (
             {agent_id: obs for agent_id in self._agent_ids},

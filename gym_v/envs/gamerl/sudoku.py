@@ -13,6 +13,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description
 
 logger = get_logger()
 
@@ -22,15 +23,7 @@ logger = get_logger()
 GAME_RULES_TEMPLATE = dedent("""
     This is a sudoku game in which the board is filled with a total number of colours equal to the length of the board's sides, and no rows, columns or squares are allowed to have duplicate colours. You should fill the empty cells on the board with following {size} colors: {colors}.
 
-    In this Sudoku board, the row coordinates are 1-{size} from top to bottom, and the column coordinates are 1-{size} from left to right.
-""").strip()
-
-ANSWER_FORMAT_PROMPT = dedent("""
-    **Answer Format:**
-    - For numbers: Reply with only the number, e.g., 7
-    - For multiple choice: Reply with only the letter (A, B, C, D, E, F, G, H, or I)
-
-    Do not include any explanation or extra text.
+    In this Sudoku board, the row coordinates are 1-{size} from top to bottom, and the column coordinates are 1-{size} from left to right. The top-left cell is (1, 1).
 """).strip()
 
 
@@ -50,36 +43,36 @@ class GameRLSudokuQAEnv(Env):
     # Question types
     QUESTION_TYPES = [
         {
-            "id": "type_0",
-            "name": "color_position",
+            "id": "color_position",
+            "name": "Color Position",
             "level": "Easy",
             "answer_format": "multiple_choice",
             "qa_type": "Target Perception",
         },
         {
-            "id": "type_1",
-            "name": "color_count",
+            "id": "color_count",
+            "name": "Color Count",
             "level": "Easy",
             "answer_format": "fill_in_blank",
             "qa_type": "Target Perception",
         },
         {
-            "id": "type_2",
-            "name": "possible_colors",
+            "id": "possible_colors",
+            "name": "Possible Colors",
             "level": "Medium",
             "answer_format": "fill_in_blank",
             "qa_type": "State Prediction",
         },
         {
-            "id": "type_3",
-            "name": "empty_count",
+            "id": "empty_count",
+            "name": "Empty Count",
             "level": "Medium",
             "answer_format": "fill_in_blank",
             "qa_type": "Target Perception",
         },
         {
-            "id": "type_4",
-            "name": "deductive_reasoning",
+            "id": "deductive_reasoning",
+            "name": "Deductive Reasoning",
             "level": "Hard",
             "answer_format": "multiple_choice",
             "qa_type": "Deductive Reasoning",
@@ -141,15 +134,17 @@ class GameRLSudokuQAEnv(Env):
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        colors_str = ", ".join(self._color_names)
-        game_rules = GAME_RULES_TEMPLATE.format(size=self._size, colors=colors_str)
-        desc = game_rules + "\n\n**Question:** " + self._question
-
-        if self._options:
-            desc += "\n\n**Options:**\n" + "\n".join(self._options)
-
-        desc += ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        colors = list(self._colors.keys()) if self._colors else []
+        game_rules = GAME_RULES_TEMPLATE.format(
+            size=self._size, colors=", ".join(colors)
+        )
+        return build_description(
+            game_name="Sudoku",
+            rules=game_rules,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Sudoku game state.
@@ -230,23 +225,40 @@ Grid ({color_legend}, .=empty):
             f"Reset Sudoku QA (type={self._question_type_idx}, size={self._size}x{self._size})."
         )
 
+        text_state = self._get_state_text()
+
         obs = Observation(
             image=self.render(),
-            text=self._get_state_text(),
+            text=text_state,
             metadata={
+                "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
-                "question_type": self.QUESTION_TYPES[self._question_type_idx][
-                    "name"
-                ],
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
                 "level": self.QUESTION_TYPES[self._question_type_idx]["level"],
                 "size": self._size,
             },
         )
-        info = {"oracle_answer": self._oracle_answer}
+        info = {
+            "seed": seed,
+            "oracle_answer": self._oracle_answer,
+            "question_type": self.QUESTION_TYPES[self._question_type_idx]["id"],
+        }
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
         }
+
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return 1.0 if self._check_answer(answer) else 0.0
 
     def inner_step(
         self, action: dict[str, str]
@@ -266,10 +278,9 @@ Grid ({color_legend}, .=empty):
 
         user_answer = action_str.strip().upper()
 
-        # Normalize answer
-        correct = self._check_answer(user_answer)
-
-        reward = 1.0 if correct else 0.0
+        # Check answer
+        reward = self._score_answer(user_answer)
+        correct = reward == 1.0
 
         obs = Observation(
             image=self.render(),
@@ -559,9 +570,7 @@ Grid ({color_legend}, .=empty):
                 if empty > n:
                     count += 1
 
-        self._question = (
-            f"How many {target_type}s have more than {n} empty cells?"
-        )
+        self._question = f"How many {target_type}s have more than {n} empty cells?"
         self._oracle_answer = str(count)
         self._options = []
 

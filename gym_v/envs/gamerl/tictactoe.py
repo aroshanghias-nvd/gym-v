@@ -19,7 +19,10 @@ from typing import Any
 
 from PIL import Image, ImageDraw
 
-from gym_v import Env, Observation
+from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_choice
+
+logger = get_logger()
 
 
 class TicTacToe:
@@ -207,7 +210,7 @@ class TicTacToe:
         return new_game
 
 
-TICTACTOE_RULES = dedent("""
+GAME_RULES = dedent("""
     # TicTacToe Game Rules
 
     ## Basic Setup
@@ -293,21 +296,16 @@ class GameRLTicTacToeQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Provide your answer directly. For multiple choice, respond with the letter only.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = TICTACTOE_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for opt in self._options:
-                desc += f"{opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Tic-Tac-Toe",
+            rules=GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current TicTacToe game state.
@@ -371,6 +369,7 @@ Grid (O=first player, X=second player, .=empty):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -445,7 +444,7 @@ Grid (O=first player, X=second player, .=empty):
             answer = "C"
             color = "white"
 
-        question = f"""{TICTACTOE_RULES}
+        question = f"""{GAME_RULES}
 
 **Question:** What is the color of the block at position ({row}, {col})?
 
@@ -500,7 +499,7 @@ C. white"""
                             options.append((opt_letter, f"({pos[0]}, {pos[1]})"))
 
         # Build question text
-        question = f"""{TICTACTOE_RULES}
+        question = f"""{GAME_RULES}
 
 **Question:** What is the optimal move for the current player ({player_name})?
 
@@ -584,7 +583,7 @@ C. white"""
                             options.append((opt_letter, f"({pos[0]}, {pos[1]})"))
 
         # Build question text
-        question = f"""{TICTACTOE_RULES}
+        question = f"""{GAME_RULES}
 
 **Question:** If the current player ({player_name}) moves to position ({move_pos[0]}, {move_pos[1]}), what is the opponent's ({opponent_name}) optimal response?
 
@@ -599,6 +598,17 @@ C. white"""
             "answer": correct_option,
             "analysis": analysis,
         }
+
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_choice(answer, self._oracle_answer)
 
     def inner_step(
         self, action: dict[str, str]
@@ -624,8 +634,8 @@ C. white"""
         action_str = action[agent_id]
 
         # Check answer
-        correct = action_str.strip().upper() == self._oracle_answer.upper()
-        reward = 1.0 if correct else 0.0
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         # Generate response
         if correct:
@@ -637,7 +647,11 @@ C. white"""
 
         terminated = True
         truncated = False
-        info = {}
+        info = {
+            "oracle_answer": self._oracle_answer,
+            "user_answer": action_str,
+            "correct": correct,
+        }
 
         return (
             {agent_id: obs for agent_id in self._agent_ids},

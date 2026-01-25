@@ -12,6 +12,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
 
 logger = get_logger()
 
@@ -101,7 +102,7 @@ class GameRLTangramQAEnv(Env):
         20: (115, 220, 233),  # light cyan
     }
 
-    TANGRAM_RULES = dedent("""
+    GAME_RULES = dedent("""
         Rules:
         1. Each numbered region represents a piece on the board.
         2. Pieces are considered adjacent if they share at least one edge.
@@ -147,22 +148,16 @@ class GameRLTangramQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Reply with only the answer (number or option number).
-        For multiple choice: 1, 2, 3, etc.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = self.TANGRAM_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for i, opt in enumerate(self._options):
-                desc += f"{i+1}. {opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Tangram Puzzle",
+            rules=self.GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Tangram state."""
@@ -233,6 +228,7 @@ class GameRLTangramQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -250,6 +246,17 @@ class GameRLTangramQAEnv(Env):
             agent_id: info for agent_id in self._agent_ids
         }
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, self._oracle_answer)
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -263,18 +270,16 @@ class GameRLTangramQAEnv(Env):
         action_str = action[agent_id]
 
         info: dict[str, Any] = {}
-        reward = 0.0
         terminated = True
         truncated = False
 
         # Check answer
-        correct = action_str.strip().lower() == self._oracle_answer.strip().lower()
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         if correct:
-            reward = 1.0
             response = "Correct!"
         else:
-            reward = 0.0
             response = f"Incorrect. The correct answer is: {self._oracle_answer}"
 
         info = {
@@ -321,8 +326,8 @@ class GameRLTangramQAEnv(Env):
         # Total image size
         total_width = max(board_width, removed_width) + 2 * margin
         total_height = (
-            board_height + removed_height + 3 * margin + 40
-        )  # Extra for title
+            board_height + removed_height + 4 * margin + 60
+        )  # Extra for both titles (Main Board + Removed Pieces)
 
         img = Image.new("RGB", (total_width, total_height), (255, 255, 255))
         draw = ImageDraw.Draw(img)
@@ -560,7 +565,7 @@ class GameRLTangramQAEnv(Env):
         correct_answer = options.index(unique_pieces) + 1
         options_text = "\n".join([f"{i+1}: {opt}" for i, opt in enumerate(options)])
 
-        question = f"""{self.TANGRAM_RULES}
+        question = f"""{self.GAME_RULES}
 
 Question:
 How many pieces are currently on the main board?
@@ -589,7 +594,7 @@ Options:
         correct_answer = options.index(target_area) + 1
         options_text = "\n".join([f"{i+1}: {opt}" for i, opt in enumerate(options)])
 
-        question = f"""{self.TANGRAM_RULES}
+        question = f"""{self.GAME_RULES}
 
 Question:
 What is the area (number of cells) of Piece {target_piece}?
@@ -627,7 +632,7 @@ Options:
         correct_answer = options.index(correct_count) + 1
         options_text = "\n".join([f"{i+1}: {opt}" for i, opt in enumerate(options)])
 
-        question = f"""{self.TANGRAM_RULES}
+        question = f"""{self.GAME_RULES}
 
 Question:
 How many different pieces are adjacent to Piece {target_piece}?
@@ -667,7 +672,7 @@ Options:
         correct_answer = options.index(correct_description) + 1
         options_text = "\n".join([f"{i+1}: {opt}" for i, opt in enumerate(options)])
 
-        question = f"""{self.TANGRAM_RULES}
+        question = f"""{self.GAME_RULES}
 
 One piece is removed from main board and shown below. It has been rotated and may have been flipped.
 
@@ -724,7 +729,7 @@ Options:
         correct_answer = options.index(answer_str) + 1
         options_text = "\n".join([f"{i+1}: {opt}" for i, opt in enumerate(options)])
 
-        question = f"""{self.TANGRAM_RULES}
+        question = f"""{self.GAME_RULES}
 New pieces can only be placed adjacent to existing pieces.
 
 Question:

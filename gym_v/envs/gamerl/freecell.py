@@ -11,6 +11,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
 
 logger = get_logger()
 
@@ -109,7 +110,7 @@ class GameRLFreecellQAEnv(Env):
         13: "K",
     }
 
-    FREECELL_RULES = dedent("""
+    GAME_RULES = dedent("""
         In FreeCell, cards can be moved according to specific rules:
         - Cards in cascade piles must be stacked in descending order with alternating colors
         - Foundation piles must be built up by suit from Ace to King
@@ -120,7 +121,7 @@ class GameRLFreecellQAEnv(Env):
     def __init__(
         self,
         cascade_number: int | None = None,
-        question_type: str | int | None = None,
+        question_type: int | None = None,
         num_players: int = 1,
         **kwargs,
     ):
@@ -145,22 +146,16 @@ class GameRLFreecellQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Reply with only the answer (number or option number).
-        For multiple choice: 1, 2, 3, etc.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = self.FREECELL_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for i, opt in enumerate(self._options):
-                desc += f"{i+1}. {opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="FreeCell Solitaire",
+            rules=self.GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current FreeCell game state.
@@ -219,16 +214,12 @@ class GameRLFreecellQAEnv(Env):
         # Select question type
         if self._question_type_param is None:
             self._question_type_idx = random.randint(0, len(self.QUESTION_TYPES) - 1)
-        elif isinstance(self._question_type_param, int):
-            self._question_type_idx = self._question_type_param
         else:
-            # Support string IDs
-            for i, qt in enumerate(self.QUESTION_TYPES):
-                if qt["id"] == self._question_type_param:
-                    self._question_type_idx = i
-                    break
-            else:
-                raise ValueError(f"Unknown question type: {self._question_type_param}")
+            if not (0 <= self._question_type_param < len(self.QUESTION_TYPES)):
+                raise ValueError(
+                    f"Invalid question type index: {self._question_type_param}"
+                )
+            self._question_type_idx = self._question_type_param
 
         q_type = self.QUESTION_TYPES[self._question_type_idx]
 
@@ -257,6 +248,7 @@ class GameRLFreecellQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -273,6 +265,17 @@ class GameRLFreecellQAEnv(Env):
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
         }
+
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, self._oracle_answer)
 
     def inner_step(
         self, action: dict[str, str]
@@ -292,13 +295,12 @@ class GameRLFreecellQAEnv(Env):
         truncated = False
 
         # Check answer
-        correct = action_str.strip().lower() == self._oracle_answer.strip().lower()
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         if correct:
-            reward = 1.0
             response = "Correct!"
         else:
-            reward = 0.0
             response = f"Incorrect. The correct answer is: {self._oracle_answer}"
 
         info = {
@@ -404,7 +406,14 @@ class GameRLFreecellQAEnv(Env):
                 for j, card in enumerate(pile):
                     y = y_cascade + j * overlap
                     self._draw_card(
-                        draw, x, y, card, card_width, card_height, font, True
+                        draw,
+                        x,
+                        y,
+                        card,
+                        card_width,
+                        card_height,
+                        font,
+                        j == len(pile) - 1,
                     )
 
         return img
@@ -423,7 +432,7 @@ class GameRLFreecellQAEnv(Env):
     ):
         """Draw a card or empty cell."""
         if card:
-            self._draw_card(draw, x, y, card, width, height, font, False)
+            self._draw_card(draw, x, y, card, width, height, font, True)
         else:
             # Empty cell
             draw.rectangle(
@@ -471,14 +480,10 @@ class GameRLFreecellQAEnv(Env):
             corner_font = ImageFont.truetype(
                 str(self.assets_dir / "DejaVuSans.ttf"), 10
             )
-            symbol_font = ImageFont.truetype(
-                str(self.assets_dir / "DejaVuSans.ttf"), 14
-            )
         except Exception:
             corner_font = ImageFont.load_default()
-            symbol_font = ImageFont.load_default()
 
-        # Draw value and suit in top-left corner
+        # Use a single corner marker for all cards (top visible or covered).
         draw.text(
             (x + 5, y + 5),
             value_str,
@@ -492,27 +497,6 @@ class GameRLFreecellQAEnv(Env):
             fill=color,
             font=corner_font,
             anchor="lt",
-        )
-
-        # Draw value and suit in bottom-right corner (upside down effect)
-        draw.text(
-            (x + width - 5, y + height - 5),
-            value_str,
-            fill=color,
-            font=corner_font,
-            anchor="rb",
-        )
-        draw.text(
-            (x + width - 5, y + height - 16),
-            suit_symbol,
-            fill=color,
-            font=corner_font,
-            anchor="rb",
-        )
-
-        # Draw suit symbols in the center based on card value
-        self._draw_card_symbols(
-            draw, x, y, width, height, card.value, suit_symbol, color, symbol_font
         )
 
     def _draw_card_symbols(
@@ -669,7 +653,7 @@ class GameRLFreecellQAEnv(Env):
         answer_index = options.index(correct_answer) + 1
         options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)])
 
-        question = f"""{self.FREECELL_RULES}
+        question = f"""{self.GAME_RULES}
 
 We have {self._cascade_number} cascade piles, and their indexes are {list(range(self._cascade_number))}.
 We have 4 freecells on the left top, and their indexes are 0,1,2,3.
@@ -732,7 +716,7 @@ Options:
         answer_index = options.index(correct_option) + 1
         options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)])
 
-        question = f"""{self.FREECELL_RULES}
+        question = f"""{self.GAME_RULES}
 
 We have {self._cascade_number} cascade piles, and their indexes are {list(range(self._cascade_number))}.
 We have 4 freecells on the left top, and their indexes are 0,1,2,3.
@@ -783,7 +767,7 @@ Options:
         from_str = selected_move["from"]
         to_str = selected_move["to"]
 
-        question = f"""{self.FREECELL_RULES}
+        question = f"""{self.GAME_RULES}
 
 We have {self._cascade_number} cascade piles, and their indexes are {list(range(self._cascade_number))}.
 We have 4 freecells on the left top, and their indexes are 0,1,2,3.

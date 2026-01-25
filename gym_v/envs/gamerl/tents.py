@@ -10,6 +10,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
 
 logger = get_logger()
 
@@ -147,22 +148,16 @@ class GameRLTentsQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Reply with only the answer (number or option number).
-        For multiple choice: 1, 2, 3, etc.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = self.GAME_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for i, opt in enumerate(self._options):
-                desc += f"{i+1}. {opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Tents Puzzle",
+            rules=self.GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Tents puzzle state.
@@ -242,6 +237,7 @@ Grid (T=tree, X=tent, .=empty):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -259,6 +255,17 @@ Grid (T=tree, X=tent, .=empty):
             agent_id: info for agent_id in self._agent_ids
         }
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, self._oracle_answer)
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -272,7 +279,6 @@ Grid (T=tree, X=tent, .=empty):
         action_str = action[agent_id]
 
         info: dict[str, Any] = {}
-        reward = 0.0
         terminated = True
         truncated = False
 
@@ -280,13 +286,12 @@ Grid (T=tree, X=tent, .=empty):
         action_str = action_str.strip()
 
         # Check if answer is correct
-        correct = action_str.strip().lower() == self._oracle_answer.strip().lower()
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         if correct:
-            reward = 1.0
             response = "Correct!"
         else:
-            reward = 0.0
             response = f"Incorrect. The correct answer is: {self._oracle_answer}"
 
         if "explanation" in self._question:
@@ -648,11 +653,6 @@ Grid (T=tree, X=tent, .=empty):
         # Find correct answer index
         correct_answer = options.index(correct_option) + 1
 
-        # Generate option text
-        options_str = "\n".join(
-            [f"{i+1}: ({x}, {y})" for i, (x, y) in enumerate(options)]
-        )
-
         question = "In the current state, only some of the correct positions of the tents are marked in the grid. Given the current state, which of the following positions contains a tree?"
 
         return {
@@ -695,11 +695,6 @@ Grid (T=tree, X=tent, .=empty):
 
         # Find correct answer index
         correct_answer = options.index(correct_option) + 1
-
-        # Generate option text
-        options_str = "\n".join(
-            [f"{i+1}: ({x}, {y})" for i, (x, y) in enumerate(options)]
-        )
 
         question = "In the current state, only some of the correct positions of the tents are marked in the grid. Given the current state, which of the following positions is allowed to place a new tent without breaking the game rules immediately (it does not have to be a part of a whole solution to the puzzle)?"
 

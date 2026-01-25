@@ -15,6 +15,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description
 
 logger = get_logger()
 
@@ -44,14 +45,6 @@ GAME_RULES = dedent("""
     4. The game ends when pieces stack up to the top of the grid.
 """).strip()
 
-ANSWER_FORMAT_PROMPT = dedent("""
-    **Answer Format:**
-    - For numbers: Reply with only the number (e.g., 5 or -1)
-    - For shape identification: Reply with only the number (1-8)
-
-    Do not include any explanation or extra text.
-""").strip()
-
 
 class GameRLTetrisQAEnv(Env):
     """Tetris Q&A environment.
@@ -70,29 +63,29 @@ class GameRLTetrisQAEnv(Env):
     # Question types
     QUESTION_TYPES = [
         {
-            "id": "type_0",
-            "name": "empty_cells_in_row",
+            "id": "empty_cells_in_row",
+            "name": "Empty Cells in Row",
             "level": "Easy",
             "answer_format": "fill_in_blank",
             "qa_type": "State Prediction",
         },
         {
-            "id": "type_1",
-            "name": "tetromino_shape",
+            "id": "tetromino_shape",
+            "name": "Tetromino Shape",
             "level": "Easy",
             "answer_format": "multiple_choice",
             "qa_type": "State Prediction",
         },
         {
-            "id": "type_2",
-            "name": "timesteps_until_collision",
+            "id": "timesteps_until_collision",
+            "name": "Timesteps Until Collision",
             "level": "Medium",
             "answer_format": "fill_in_blank",
             "qa_type": "State Prediction",
         },
         {
-            "id": "type_3",
-            "name": "max_rows_cleared",
+            "id": "max_rows_cleared",
+            "name": "Max Rows Cleared",
             "level": "Hard",
             "answer_format": "fill_in_blank",
             "qa_type": "State Prediction",
@@ -156,16 +149,17 @@ class GameRLTetrisQAEnv(Env):
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        rules = GAME_RULES.format(
-            rows=self._rows, cols=self._cols, max_row=self._rows - 1
+        rules = (
+            GAME_RULES.format(rows=self._rows, cols=self._cols, max_row=self._rows - 1)
+            + "\nThe top-left cell is (0, 0)."
         )
-        desc = rules + "\n\n**Question:** " + self._question
-
-        if self._options:
-            desc += "\n\n**Options:**\n" + "\n".join(self._options)
-
-        desc += ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Tetris",
+            rules=rules,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Tetris game state.
@@ -224,21 +218,24 @@ Grid (#=placed, *=falling, .=empty):
 
         logger.info(f"Reset Tetris QA (type={self._question_type_idx}).")
 
+        text_state = self._get_state_text()
+
         obs = Observation(
             image=self.render(),
-            text=self._get_state_text(),
+            text=text_state,
             metadata={
+                "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
-                "question_type": self.QUESTION_TYPES[self._question_type_idx][
-                    "name"
-                ],
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
                 "level": self.QUESTION_TYPES[self._question_type_idx]["level"],
             },
         )
         info = {
+            "seed": seed,
             "oracle_answer": self._oracle_answer,
-            "question_type": self._question_type_idx,
+            "question_type": self.QUESTION_TYPES[self._question_type_idx]["id"],
         }
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
@@ -264,9 +261,7 @@ Grid (#=placed, *=falling, .=empty):
             image=self.render(),
             text=None,
             metadata={
-                "question_type": self.QUESTION_TYPES[self._question_type_idx][
-                    "name"
-                ],
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
             },
         )
         info = {
@@ -293,10 +288,15 @@ Grid (#=placed, *=falling, .=empty):
         )
 
     def _score_answer(self, answer: str) -> float:
-        """Score the answer."""
-        answer_format = self.QUESTION_TYPES[self._question_type_idx][
-            "answer_format"
-        ]
+        """Score the user's answer.
+
+        Args:
+            answer: The user's answer string.
+
+        Returns:
+            1.0 if correct, 0.0 otherwise.
+        """
+        answer_format = self.QUESTION_TYPES[self._question_type_idx]["answer_format"]
 
         if answer_format == "fill_in_blank":
             match = re.search(r"-?\d+", answer)
@@ -316,7 +316,7 @@ Grid (#=placed, *=falling, .=empty):
         return 0.0
 
     def _generate_game_state(self) -> None:
-        """Generate a random game state with placed blocks and a falling piece."""
+        """Generate a random mid-game state with placed blocks and a falling piece."""
         # Initialize empty grid
         self._grid = np.zeros((self._rows, self._cols), dtype=int)
 
@@ -343,7 +343,7 @@ Grid (#=placed, *=falling, .=empty):
         self._current_pos = (start_row, start_col)
 
     def _generate_qa(self) -> None:
-        """Generate question and oracle answer."""
+        """Generate question and oracle answer based on selected question type."""
         q_type = self._question_type_idx
         self._options = None
 

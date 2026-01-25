@@ -10,6 +10,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description
 
 logger = get_logger()
 
@@ -26,12 +27,7 @@ GAME_RULES = dedent("""
     The grid uses a coordinate system where:
     - Row coordinates are 1-N from top to bottom
     - Column coordinates are 1-N from left to right
-""").strip()
-
-ANSWER_FORMAT_PROMPT = dedent("""
-    **Answer Format:**
-    - For position questions: Use format like "A) (3, 2) facing up"
-    - For number questions: Just provide the number
+    - The top-left cell is (1, 1)
 """).strip()
 
 
@@ -122,15 +118,13 @@ class GameRLLangtonAntQAEnv(Env):
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = GAME_RULES + "\n\n**Question:** " + self._question
-
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for opt in self._options:
-                desc += f"{opt}\n"
-
-        desc += ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Langton's Ant",
+            rules=GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Langton's Ant state.
@@ -196,16 +190,32 @@ Grid (A=ant, #=black, .=white):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
                 "level": q_type["level"],
             },
         )
-        info = {"oracle_answer": self._oracle_answer, "question_type": q_type}
+        info = {
+            "seed": seed,
+            "oracle_answer": self._oracle_answer,
+            "question_type": q_type["id"],
+        }
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
         }
+
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return 1.0 if self._check_answer(answer) else 0.0
 
     def inner_step(
         self, action: dict[str, str]
@@ -223,12 +233,13 @@ Grid (A=ant, #=black, .=white):
         answer = action_str.strip()
 
         # Check answer
-        correct = self._check_answer(answer)
-        reward = 1.0 if correct else 0.0
+        reward = self._score_answer(answer)
+        correct = reward == 1.0
 
         obs = Observation(image=self.render(), text=None)
         info = {
             "oracle_answer": self._oracle_answer,
+            "user_answer": action_str,
             "correct": correct,
             "question_type": self._current_q_type,
         }

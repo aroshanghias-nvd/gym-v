@@ -15,6 +15,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description
 
 logger = get_logger()
 
@@ -32,15 +33,6 @@ QUESTION_PROMPTS = [
     "Which will happen until this process ends if the snake moves like this each step: ",
     "How long is the shortest path if the snake wants to reach the food? If there is no path, print -1.",
 ]
-
-ANSWER_FORMAT_PROMPT = dedent("""
-    **Answer Format:**
-    - For coordinates: Reply in format (row, col), e.g., (3, 5)
-    - For numbers: Reply with only the number, e.g., 7
-    - For multiple choice: Reply with only the letter (A, B, C, or D)
-
-    Do not include any explanation or extra text.
-""").strip()
 
 
 class GameRLSnakeQAEnv(Env):
@@ -61,36 +53,36 @@ class GameRLSnakeQAEnv(Env):
     # Question types
     QUESTION_TYPES = [
         {
-            "id": "type_0",
-            "name": "head_pos",
+            "id": "head_pos",
+            "name": "Head Position",
             "level": "Easy",
             "answer_format": "fill_in_blank",
             "qa_type": "State Prediction",
         },
         {
-            "id": "type_1",
-            "name": "food_pos",
+            "id": "food_pos",
+            "name": "Food Position",
             "level": "Easy",
             "answer_format": "fill_in_blank",
             "qa_type": "State Prediction",
         },
         {
-            "id": "type_2",
-            "name": "snake_len",
+            "id": "snake_len",
+            "name": "Snake Length",
             "level": "Medium",
             "answer_format": "fill_in_blank",
             "qa_type": "State Prediction",
         },
         {
-            "id": "type_3",
-            "name": "which_happen",
+            "id": "which_happen",
+            "name": "What Happens Next",
             "level": "Hard",
             "answer_format": "multiple_choice",
             "qa_type": "State Prediction",
         },
         {
-            "id": "type_4",
-            "name": "path",
+            "id": "path",
+            "name": "Path to Food",
             "level": "Hard",
             "answer_format": "fill_in_blank",
             "qa_type": "State Prediction",
@@ -145,15 +137,13 @@ class GameRLSnakeQAEnv(Env):
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = GAME_RULES + "\n\n**Question:** " + self._question
-
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for opt in self._options:
-                desc += f"{opt}\n"
-
-        desc += ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Snake",
+            rules=GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current snake game state.
@@ -212,21 +202,24 @@ Grid (H=head, B=body, F=food, .=empty):
 
         logger.info(f"Reset Snake QA (type={self._question_type_idx}).")
 
+        text_state = self._get_state_text()
+
         obs = Observation(
             image=self.render(),
-            text=self._get_state_text(),
+            text=text_state,
             metadata={
+                "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
-                "question_type": self.QUESTION_TYPES[self._question_type_idx][
-                    "name"
-                ],
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
                 "level": self.QUESTION_TYPES[self._question_type_idx]["level"],
             },
         )
         info = {
+            "seed": seed,
             "oracle_answer": self._oracle_answer,
-            "question_type": self._question_type_idx,
+            "question_type": self.QUESTION_TYPES[self._question_type_idx]["id"],
         }
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
@@ -252,9 +245,7 @@ Grid (H=head, B=body, F=food, .=empty):
             image=self.render(),
             text=None,
             metadata={
-                "question_type": self.QUESTION_TYPES[self._question_type_idx][
-                    "name"
-                ],
+                "question_type": self.QUESTION_TYPES[self._question_type_idx]["name"],
             },
         )
         info = {
@@ -392,8 +383,10 @@ Grid (H=head, B=body, F=food, .=empty):
             "The snake reaches the food.",
             "Nothing happens.",
         ]
-        self._options = [f"{chr(ord('A') + i)}. {opt}" for i, opt in enumerate(options_list)]
-        self._oracle_answer = chr(ord('A') + result)
+        self._options = [
+            f"{chr(ord('A') + i)}. {opt}" for i, opt in enumerate(options_list)
+        ]
+        self._oracle_answer = chr(ord("A") + result)
 
     def _generate_moves(self, length: int) -> list[str]:
         """Generate valid moves that don't immediately reverse."""

@@ -23,30 +23,31 @@ from typing import Any
 
 import matplotlib
 
+from gym_v.envs.gamerl.utils import build_description, score_exact
+
 matplotlib.use("Agg")  # Use non-interactive backend
 from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
-from gym_v import Env, Observation
+from gym_v import Env, Observation, get_logger
+
+logger = get_logger()
 
 GAME_RULES = dedent("""
-    You are in the middle of a 3D reconstruction puzzle.
-The current structure has some initial voxels, and your goal is to complete it as the game rules.
-
-Game Rules:
-1. Goal: Reconstruct a 3D structure by adding voxels to match given projections.
-2. Grid Space: The game is played on a 3x3x3 cube grid.
-3. Coordinates: Position (x,y,z) ranges from 1 to 3, with (1,1,1) at front-left-bottom.
-4. Position Rule: Each position can contain at most one voxel.
-5. Connectivity: All voxels must be connected face-to-face.
-6. Voxel Limit: You have a maximum of n additional voxels available.
-7. Placement Rule: New voxels can only be placed adjacent to existing ones.
-8. Front View (Y-Z): Shows structure when viewed along the negative X-axis direction (front to back), with Y as horizontal axis and Z as vertical axis. Projection coordinates are in (y,z) format.
-9. Side View (X-Z): Shows structure when viewed along the positive Y-axis direction (left to right), with X as horizontal axis and Z as vertical axis. Projection coordinates are in (x,z) format.
-10. Projection Rule: A cell shows '1' if any voxel exists along that line of sight, and '0' if no voxel exists along that line.
-11. Victory: Match both projections using available voxels.
+    3D Reconstruction Puzzle Rules:
+    1. Goal: Reconstruct a 3D structure by adding voxels to match the given projections.
+    2. Grid Space: The game is played on a 3x3x3 cube grid.
+    3. Coordinates: Position (x, y, z) ranges from 1 to 3, with origin (1, 1, 1) at front-left-bottom. Coordinates are 1-based; row and column indexes begin from 1.
+    4. Position Rule: Each position can contain at most one voxel.
+    5. Connectivity: All voxels must be connected face-to-face.
+    6. Voxel Limit: You have a limited number of additional voxels available.
+    7. Placement Rule: New voxels can only be placed adjacent to existing ones.
+    8. Front View (Y-Z): Shows structure when viewed along the negative X-axis direction (front to back), with Y as horizontal axis and Z as vertical axis. Projection coordinates are in (y, z) format.
+    9. Side View (X-Z): Shows structure when viewed along the positive Y-axis direction (left to right), with X as horizontal axis and Z as vertical axis. Projection coordinates are in (x, z) format.
+    10. Projection Rule: A cell shows '1' if any voxel exists along that line of sight, and '0' if no voxel exists along that line.
+    11. Victory: Match both projections using available voxels.
 """).strip()
 
 
@@ -366,21 +367,16 @@ class GameRL3DReconstructionQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Provide your answer directly. For multiple choice, respond with the letter only.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = GAME_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for opt in self._options:
-                desc += f"{opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="3D Reconstruction Puzzle",
+            rules=GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current 3D reconstruction state."""
@@ -446,6 +442,7 @@ class GameRL3DReconstructionQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -595,6 +592,7 @@ class GameRL3DReconstructionQAEnv(Env):
         return {
             "question": question,
             "answer": str(correct_index),
+            "options": all_options,
             "analysis": analysis,
         }
 
@@ -640,12 +638,8 @@ class GameRL3DReconstructionQAEnv(Env):
             "7. Projection Rule: A cell shows '1' if any voxel exists along that line of sight.\n\n"
             "Question:\n"
             "How does the voxel structure's projections match with the target projections?\n\n"
-            "Choose the correct description from the options below.\n"
-            "Options:\n"
+            "Choose the correct description from the options below."
         )
-
-        for i, option in enumerate(all_options, 1):
-            question += f"{i}: {option}\n"
 
         analysis = "Let's analyze the projections:\n\n"
         analysis += "1. Front View (Y-Z) analysis:\n"
@@ -675,6 +669,7 @@ class GameRL3DReconstructionQAEnv(Env):
         return {
             "question": question,
             "answer": str(correct_index),
+            "options": all_options,
             "analysis": analysis,
         }
 
@@ -700,10 +695,7 @@ class GameRL3DReconstructionQAEnv(Env):
 
         question = (
             f"Action: Add {len(new_voxels)} voxels at positions: {sorted(new_voxels)}. "
-            f"After adding these voxels, what will be the {proj_name} projection of the new structure? "
-            "Write the answer as a list of three lists: [[row1], [row2], [row3]], "
-            "where each row contains three numbers (0 or 1), ordered from top to bottom. "
-            "Example format: [[0, 1, 0], [1, 1, 0], [0, 1, 1]]"
+            f"After adding these voxels, what will be the {proj_name} projection of the new structure?"
         )
 
         if check_yz:
@@ -804,6 +796,17 @@ class GameRL3DReconstructionQAEnv(Env):
 
         return {"question": question, "answer": answer, "analysis": analysis}
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, self._oracle_answer)
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -821,8 +824,8 @@ class GameRL3DReconstructionQAEnv(Env):
         action_str = action[agent_id]
 
         # Check answer
-        correct = action_str.strip() == self._oracle_answer.strip()
-        reward = 1.0 if correct else 0.0
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         if correct:
             response = "Correct!"
@@ -833,7 +836,11 @@ class GameRL3DReconstructionQAEnv(Env):
 
         terminated = True
         truncated = False
-        info = {}
+        info = {
+            "oracle_answer": self._oracle_answer,
+            "user_answer": action_str,
+            "correct": correct,
+        }
 
         return (
             {agent_id: obs for agent_id in self._agent_ids},
@@ -882,15 +889,15 @@ class GameRL3DReconstructionQAEnv(Env):
             ax_3d, self._game.current_voxels, remaining, "Current Structure"
         )
 
-        # Calculate projections of current state
-        current_yz, current_xz = self._game._calculate_projections(
-            self._game.current_voxels
-        )
+        # Use TARGET projections for side views (what player needs to match)
+        # This matches the original Game-RL implementation
+        target_yz = self._game.target_yz_projection
+        target_xz = self._game.target_xz_projection
 
-        # Side view plots
+        # Side view plots showing TARGET projections
         ax_yz = fig.add_subplot(gs[0, 1])
         ax_xz = fig.add_subplot(gs[1, 1])
-        self._setup_side_views(ax_yz, ax_xz, current_yz, current_xz)
+        self._setup_side_views(ax_yz, ax_xz, target_yz, target_xz)
 
         # Convert matplotlib figure to PIL Image
         buf = io.BytesIO()
@@ -1031,9 +1038,9 @@ class GameRL3DReconstructionQAEnv(Env):
             box = ax.get_position()
             ax.set_position([box.x0, box.y0, box.width * 0.9, box.height * 0.9])
 
-        # Add labels and formatting
-        self._format_side_view(ax_yz, "Front View (Y-Z Plane)", "Y")
-        self._format_side_view(ax_xz, "Side View (X-Z Plane)", "X")
+        # Add labels and formatting (indicate these are TARGET projections)
+        self._format_side_view(ax_yz, "Target Front View (Y-Z)", "Y")
+        self._format_side_view(ax_xz, "Target Side View (X-Z)", "X")
 
     def _format_side_view(self, ax, title, xlabel):
         """Format a side view projection plot."""

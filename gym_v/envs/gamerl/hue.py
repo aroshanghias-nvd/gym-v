@@ -12,6 +12,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
 
 logger = get_logger()
 
@@ -69,7 +70,7 @@ class GameRLHueQAEnv(Env):
         board_size: int | None = None,
         num_lines: int | None = None,
         cell_size: int = 60,
-        question_type: str | int | None = None,
+        question_type: int | None = None,
         num_players: int = 1,
         **kwargs,
     ):
@@ -101,22 +102,16 @@ class GameRLHueQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Reply with only the answer (number or option number).
-        For multiple choice: 1, 2, 3, etc.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = self.GAME_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for i, opt in enumerate(self._options):
-                desc += f"{i+1}. {opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Hue Color Gradient Puzzle",
+            rules=self.GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current puzzle state.
@@ -155,16 +150,12 @@ class GameRLHueQAEnv(Env):
         # Select question type
         if self._question_type_param is None:
             self._question_type_idx = random.randint(0, len(self.QUESTION_TYPES) - 1)
-        elif isinstance(self._question_type_param, int):
-            self._question_type_idx = self._question_type_param
         else:
-            # Support string IDs
-            for i, qt in enumerate(self.QUESTION_TYPES):
-                if qt["id"] == self._question_type_param:
-                    self._question_type_idx = i
-                    break
-            else:
-                raise ValueError(f"Unknown question type: {self._question_type_param}")
+            if not (0 <= self._question_type_param < len(self.QUESTION_TYPES)):
+                raise ValueError(
+                    f"Invalid question type index: {self._question_type_param}"
+                )
+            self._question_type_idx = self._question_type_param
 
         q_type = self.QUESTION_TYPES[self._question_type_idx]
 
@@ -196,6 +187,7 @@ class GameRLHueQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -212,6 +204,17 @@ class GameRLHueQAEnv(Env):
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
         }
+
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, self._oracle_answer)
 
     def inner_step(
         self, action: dict[str, str]
@@ -234,13 +237,12 @@ class GameRLHueQAEnv(Env):
         action_str = action_str.strip()
 
         # Check if answer is correct
-        correct = action_str.strip().lower() == self._oracle_answer.strip().lower()
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         if correct:
-            reward = 1.0
             response = "Correct!"
         else:
-            reward = 0.0
             response = f"Incorrect. The correct answer is: {self._oracle_answer}"
 
         info = {
@@ -275,7 +277,7 @@ class GameRLHueQAEnv(Env):
         img_width = board_size + index_margin
         img_height = board_size + padding + options_height + index_margin
 
-        img = Image.new("RGB", (img_width, img_height), (222, 184, 135))
+        img = Image.new("RGB", (img_width, img_height), (255, 255, 255))
         draw = ImageDraw.Draw(img)
 
         try:
@@ -296,7 +298,7 @@ class GameRLHueQAEnv(Env):
             draw.text(
                 (
                     10,
-                    index_margin + i * self._cell_size + self._cell_size // 2,
+                    index_margin + i * self._cell_size + self._cell_size // 2 + 2,
                 ),
                 str(i + 1),
                 fill=(0, 0, 0),
@@ -343,16 +345,19 @@ class GameRLHueQAEnv(Env):
             y_start = board_size + padding + index_margin + 20
             for idx, color in enumerate(self._shuffled_colors):
                 x_start = idx * option_width + 5
-                draw.text(
-                    (x_start, y_start - 5),
-                    f"{idx + 1}",
-                    fill=(0, 0, 0),
-                    font=index_font,
-                )
                 swatch = self._create_color_swatch(
                     tuple(color), width=option_width - 10
                 )
                 img.paste(swatch, (x_start, y_start))
+                label_text = f"{idx + 1}"
+                bbox = draw.textbbox((0, 0), label_text, font=index_font)
+                text_height = bbox[3] - bbox[1]
+                draw.text(
+                    (x_start, y_start - 10 - text_height),
+                    label_text,
+                    fill=(0, 0, 0),
+                    font=index_font,
+                )
 
         return img
 
@@ -377,8 +382,19 @@ class GameRLHueQAEnv(Env):
 
         if empty:
             if cell_label:
+                bbox = draw.textbbox(
+                    (0, 0),
+                    cell_label,
+                    font=label_font,
+                    stroke_width=2,
+                )
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
                 draw.text(
-                    (self._cell_size // 3, 2 * self._cell_size // 3),
+                    (
+                        (self._cell_size - text_width) // 2,
+                        (self._cell_size - text_height) // 2,
+                    ),
                     cell_label,
                     fill=(0, 0, 0),
                     font=label_font,
@@ -558,7 +574,9 @@ class GameRLHueQAEnv(Env):
 
         line_type = "row" if gradient["type"] == "row" else "column"
 
-        question = f"What is the gradient pattern in {line_type} {gradient['index'] + 1}?"
+        question = (
+            f"What is the gradient pattern in {line_type} {gradient['index'] + 1}?"
+        )
 
         return {
             "question": question,

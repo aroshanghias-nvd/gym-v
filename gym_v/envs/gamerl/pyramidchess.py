@@ -15,7 +15,10 @@ from typing import Any
 
 from PIL import Image
 
-from gym_v import Env, Observation
+from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
+
+logger = get_logger()
 
 # Constants
 PLAYER_0 = 0
@@ -551,10 +554,10 @@ def draw_pyramid_combined(layers: dict, plot_level: str) -> Image.Image:
 # ============================================================================
 
 
-PYRAMID_RULES = dedent("""
+GAME_RULES = dedent("""
     Pyramid Chess Rules:
 0. Game Board:
-The game board is square and comes in various sizes: 3x3, 4x4, or 5x5. On an nxn board, there are n levels (0 to n-1). At each level k, the x and y coordinates range from 0 to n-1-k, resulting in (n-k)**2 slots per level. The slots in the lower levels act as the base for the slots in the upper levels. Slots at level 0 have no base, while slots at level j (j!=0) with coordinates (m,n) are supported by four base slots (m,n),(m+1,n),(m,n+1),(m+1,n+1) from level j-1.
+The game board is square and comes in various sizes: 3x3, 4x4, or 5x5. On an nxn board, there are n levels (0 to n-1). At each level k, the x and y coordinates range from 0 to n-1-k, resulting in (n-k)**2 slots per level. The slots in the lower levels act as the base for the slots in the upper levels. Slots at level 0 have no base, while slots at level j (j!=0) with coordinates (m,n) are supported by four base slots (m,n),(m+1,n),(m,n+1),(m+1,n+1) from level j-1. The top-left slot on each level is (0,0).
 
 1. Players and Initial Setup:
 The game is played between two players, designated as PLAYER_0 and PLAYER_1, each using balls of a distinct color from their color pool, blue balls for PLAYER_0 and red balls for PLAYER_1. Players take turns placing their balls on a square game board. The number of balls available to each player depends on the size of the board: on a 3x3 board, each player has 7 balls; on a 4x4 board, each has 15 balls; and on a 5x5 board, PLAYER_0 (the first player to place a ball) has 28 balls, while PLAYER_1 has 27 balls.
@@ -654,21 +657,16 @@ class GameRLPyramidChessQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Provide your answer directly. For multiple choice, respond with the number only.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = PYRAMID_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for opt in self._options:
-                desc += f"{opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Pyramid Chess",
+            rules=GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current pyramid chess state."""
@@ -738,6 +736,7 @@ class GameRLPyramidChessQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -755,6 +754,17 @@ class GameRLPyramidChessQAEnv(Env):
             agent_id: info for agent_id in self._agent_ids
         }
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, str(self._oracle_answer))
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -767,13 +777,9 @@ class GameRLPyramidChessQAEnv(Env):
         agent_id = next(iter(self._agent_ids))
         action_str = action[agent_id]
 
-        # Normalize answer
-        answer_normalized = action_str.strip().lower()
-        correct_answer = str(self._oracle_answer).strip().lower()
-
         # Check if correct
-        correct = answer_normalized == correct_answer
-        reward = 1.0 if correct else 0.0
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         # Generate response
         if correct:
@@ -789,7 +795,11 @@ class GameRLPyramidChessQAEnv(Env):
 
         terminated = True
         truncated = False
-        info = {}
+        info = {
+            "oracle_answer": self._oracle_answer,
+            "user_answer": action_str,
+            "correct": correct,
+        }
 
         return (
             {agent_id: obs for agent_id in self._agent_ids},
@@ -831,7 +841,12 @@ class GameRLPyramidChessQAEnv(Env):
             answer = 2
             analysis += f"We can observe the layout of the pyramid across its levels. Based on level {level}'s grid (specifically at coordinate {position}), the ball is red, which corresponds to PLAYER_1."
 
-        return {"question": question, "answer": str(answer), "options": options, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": str(answer),
+            "options": options,
+            "analysis": analysis,
+        }
 
     def _generate_can_place_question(self) -> dict:
         """Type 1: Can a ball be placed and what outcome?"""
@@ -847,7 +862,12 @@ class GameRLPyramidChessQAEnv(Env):
         color = COLOR[color_ind]
 
         question = f"Can a ball be placed at coordinate {position} on Level {level}? If a {color} ball is placed there, what would be the outcome?"
-        options = ["Can place and no balls taken", "Can place and then balls can be taken", "Cannot place, position already occupied", "Cannot place, ball not ready below"]
+        options = [
+            "Can place and no balls taken",
+            "Can place and then balls can be taken",
+            "Cannot place, position already occupied",
+            "Cannot place, ball not ready below",
+        ]
 
         length = len(self._board.Board)
         analysis = f"From the image provided, we can recognize that the board is a {length}x{length} board. "
@@ -877,7 +897,12 @@ class GameRLPyramidChessQAEnv(Env):
                 ]
                 analysis += f"The coordinate {position} on level {level} cannot have a ball placed there. Because there are no platform which four balls below it form a 2x2 block to support it. To put a ball at coordinate {position} on level {level}, the bases of the position which are {bases} on level {level-1} must be full. But there is no ball at {not_ready} on level {level-1}. If a ball is placed at the position it will fall down. Therefore, the status is: Cannot place, ball not ready below."
 
-        return {"question": question, "answer": str(answer), "options": options, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": str(answer),
+            "options": options,
+            "analysis": analysis,
+        }
 
     def _generate_steps_question(self) -> dict:
         """Type 2: How many steps to place ball at coordinate?"""
@@ -999,9 +1024,19 @@ class GameRLPyramidChessQAEnv(Env):
             status_text = "Not ready (base incomplete)"
 
         question = f"What is the higher level status of coordinate {position} at Level {level}?"
-        options = ["Legal to place ball", "Contains a ball", "Ball can be taken", "Not ready"]
+        options = [
+            "Legal to place ball",
+            "Contains a ball",
+            "Ball can be taken",
+            "Not ready",
+        ]
 
         length = len(self._board.Board)
         analysis = f"From the image provided, we can recognize that the board is a {length}x{length} board. Based on the coordinate {position} at level {level}, the status is: {status_text}."
 
-        return {"question": question, "answer": str(answer), "options": options, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": str(answer),
+            "options": options,
+            "analysis": analysis,
+        }

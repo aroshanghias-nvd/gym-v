@@ -12,7 +12,6 @@ This environment provides 5 question types about game moves and strategy.
 from __future__ import annotations
 
 from importlib import resources
-import logging
 from pathlib import Path
 import random
 from textwrap import dedent
@@ -20,12 +19,13 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
-from gym_v import Env, Observation
+from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 # Game Rules
-KLONDIKE_RULES = dedent("""
+GAME_RULES = dedent("""
     The given image represents the interface of the game Klondike Solitaire. The user interface consists of a board with 52 playing cards divided into four distinct areas:
 
 1. **Stock Pile (Draw Pile):** Initially composed of 24 face-down cards. The player can draw one card at a time to reveal its face.
@@ -648,21 +648,16 @@ class GameRLKlondikeQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Provide your answer as a number (1, 2, etc.) for multiple choice questions.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = KLONDIKE_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for opt in self._options:
-                desc += f"{opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Klondike Solitaire",
+            rules=GAME_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Klondike game state.
@@ -767,6 +762,7 @@ class GameRLKlondikeQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -784,6 +780,17 @@ class GameRLKlondikeQAEnv(Env):
             agent_id: info for agent_id in self._agent_ids
         }
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, str(self._oracle_answer))
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -796,13 +803,9 @@ class GameRLKlondikeQAEnv(Env):
         agent_id = next(iter(self._agent_ids))
         action_str = action[agent_id]
 
-        # Normalize answer
-        answer_normalized = action_str.strip().lower()
-        correct_answer = str(self._oracle_answer).strip().lower()
-
         # Check if correct
-        correct = answer_normalized == correct_answer
-        reward = 1.0 if correct else 0.0
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         # Generate response
         if correct:
@@ -816,7 +819,11 @@ class GameRLKlondikeQAEnv(Env):
 
         terminated = True
         truncated = False
-        info = {}
+        info = {
+            "oracle_answer": self._oracle_answer,
+            "user_answer": action_str,
+            "correct": correct,
+        }
 
         return (
             {agent_id: obs for agent_id in self._agent_ids},
@@ -868,10 +875,8 @@ class GameRLKlondikeQAEnv(Env):
         if correct_answer != 8:
             options[7] = "No possible moves from the options"
 
-        # Build question
-        question = f"{KLONDIKE_RULES}\n\nWhich of the following moves is valid?\n"
-        for i, opt in enumerate(options):
-            question += f"{i+1}. {opt}\n"
+        # Build question (without embedded options)
+        question = "Which of the following moves is valid?"
 
         # Analysis
         analysis = "Current board state analysis:\n"
@@ -884,6 +889,7 @@ class GameRLKlondikeQAEnv(Env):
         return {
             "question": question,
             "answer": str(correct_answer),
+            "options": options,
             "analysis": analysis,
         }
 
@@ -891,7 +897,8 @@ class GameRLKlondikeQAEnv(Env):
         """Type 1: Is the game in a deadlock?"""
         is_deadlock = self._game.is_deadlock()
 
-        question = f"{KLONDIKE_RULES}\n\nIs the current game state in a deadlock?\n1. Yes\n2. No"
+        question = "Is the current game state in a deadlock?"
+        options = ["Yes", "No"]
 
         answer = "1" if is_deadlock else "2"
 
@@ -912,7 +919,12 @@ class GameRLKlondikeQAEnv(Env):
                         "Not in deadlock: face-down cards can still be revealed."
                     )
 
-        return {"question": question, "answer": answer, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": answer,
+            "options": options,
+            "analysis": analysis,
+        }
 
     def _generate_effectiveness_question(self) -> dict:
         """Type 2: Which move is most effective?"""
@@ -945,9 +957,7 @@ class GameRLKlondikeQAEnv(Env):
         random.shuffle(options)
         answer = str(options.index(best_move) + 1)
 
-        question = f"{KLONDIKE_RULES}\n\nWhich move is most effective?\n"
-        for i, opt in enumerate(options):
-            question += f"{i+1}. {opt}\n"
+        question = "Which move is most effective?"
 
         analysis = f"The most effective move is: {best_move}\n"
         if "Foundation" in best_move:
@@ -955,7 +965,12 @@ class GameRLKlondikeQAEnv(Env):
         else:
             analysis += "This move helps reveal hidden cards or creates strategic opportunities."
 
-        return {"question": question, "answer": answer, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": answer,
+            "options": options,
+            "analysis": analysis,
+        }
 
     def _generate_validity_question(self) -> dict:
         """Type 3: Is a specific move valid?"""
@@ -970,7 +985,8 @@ class GameRLKlondikeQAEnv(Env):
         valid_moves = self._game.get_valid_moves()
         is_valid = test_move in valid_moves
 
-        question = f"{KLONDIKE_RULES}\n\nIs the following move valid?\n{test_move}\n\n1. Yes\n2. No"
+        question = f"Is the following move valid?\n{test_move}"
+        options = ["Yes", "No"]
 
         answer = "1" if is_valid else "2"
 
@@ -980,7 +996,12 @@ class GameRLKlondikeQAEnv(Env):
         else:
             analysis += "This move violates the game rules."
 
-        return {"question": question, "answer": answer, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": answer,
+            "options": options,
+            "analysis": analysis,
+        }
 
     def _generate_foundation_question(self) -> dict:
         """Type 4: Can a card be moved to foundation?"""
@@ -1014,7 +1035,8 @@ class GameRLKlondikeQAEnv(Env):
                 if can_move:
                     break
 
-        question = f"{KLONDIKE_RULES}\n\nCan any card be moved to a foundation pile?\n1. Yes\n2. No"
+        question = "Can any card be moved to a foundation pile?"
+        options = ["Yes", "No"]
 
         answer = "1" if can_move else "2"
 
@@ -1024,4 +1046,9 @@ class GameRLKlondikeQAEnv(Env):
         else:
             analysis = "No cards can currently be moved to foundation piles."
 
-        return {"question": question, "answer": answer, "analysis": analysis}
+        return {
+            "question": question,
+            "answer": answer,
+            "options": options,
+            "analysis": analysis,
+        }

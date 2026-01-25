@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 
 from gym_v import Env, Observation, get_logger
+from gym_v.envs.gamerl.utils import build_description, score_exact
 
 logger = get_logger()
 
@@ -78,7 +79,7 @@ class GameRLRubiksCubeQAEnv(Env):
     RUBIKS_RULES = dedent("""
         The Rubik's cube has six faces: Upper (U), Down (D), Left (L), Right (R), Front (F), and Back (B).
         Each face is a 3x3 grid with coordinates (row, col) where row and col go from 0 to 2.
-        For each face, coordinates are determined: column increases from left to right (0,1,2) and row increases from bottom to top (0,1,2).
+        For each face, coordinates are determined: column increases from left to right (0,1,2) and row increases from bottom to top (0,1,2). The bottom-left cell is (0, 0).
         Moves: An uppercase letter indicates which face to rotate, with a prime symbol (') denoting counterclockwise rotation.
     """).strip()
 
@@ -116,22 +117,16 @@ class GameRLRubiksCubeQAEnv(Env):
         self._options: list[str] | None = None
         self._oracle_answer: str = ""
 
-    ANSWER_FORMAT_PROMPT = dedent("""
-        **Answer Format:**
-        Reply with only the answer (number or option number).
-        For multiple choice: 1, 2, 3, etc.
-    """).strip()
-
     @property
     def description(self) -> str:
         """Return game rules + current question + answer format."""
-        desc = self.RUBIKS_RULES + "\n\n**Question:** " + self._question
-        if self._options:
-            desc += "\n\n**Options:**\n"
-            for i, opt in enumerate(self._options):
-                desc += f"{i+1}. {opt}\n"
-        desc += "\n\n" + self.ANSWER_FORMAT_PROMPT
-        return desc.strip()
+        return build_description(
+            game_name="Rubik's Cube",
+            rules=self.RUBIKS_RULES,
+            question=self._question,
+            options=self._options,
+            oracle_answer=self._oracle_answer,
+        )
 
     def _get_state_text(self) -> str:
         """Generate text description of current Rubik's Cube state."""
@@ -211,6 +206,7 @@ class GameRLRubiksCubeQAEnv(Env):
             text=text_state,
             metadata={
                 "text_state": text_state,
+                "text_prompt": f"{text_state}\n\n{self.description}",
                 "question": self._question,
                 "options": self._options,
                 "question_type": q_type["name"],
@@ -228,6 +224,17 @@ class GameRLRubiksCubeQAEnv(Env):
             agent_id: info for agent_id in self._agent_ids
         }
 
+    def _score_answer(self, answer: str) -> float:
+        """Score the user's answer.
+
+        Args:
+            answer: User's answer string
+
+        Returns:
+            1.0 if correct, 0.0 otherwise
+        """
+        return score_exact(answer, self._oracle_answer)
+
     def inner_step(
         self, action: dict[str, str]
     ) -> tuple[
@@ -241,18 +248,16 @@ class GameRLRubiksCubeQAEnv(Env):
         action_str = action[agent_id]
 
         info: dict[str, Any] = {}
-        reward = 0.0
         terminated = True
         truncated = False
 
         # Check answer
-        correct = action_str.strip().lower() == self._oracle_answer.strip().lower()
+        reward = self._score_answer(action_str)
+        correct = reward == 1.0
 
         if correct:
-            reward = 1.0
             response = "Correct!"
         else:
-            reward = 0.0
             response = f"Incorrect. The correct answer is: {self._oracle_answer}"
 
         info = {
