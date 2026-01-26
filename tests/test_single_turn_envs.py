@@ -10,15 +10,14 @@ correct and incorrect answers.
 
 from __future__ import annotations
 
+from pathlib import Path
 import random
 import string
-from pathlib import Path
 from typing import Any
 import unittest
 
 import gym_v
 from gym_v.core import Observation
-
 
 # Environment registries organized by benchmark suite
 REASONING_GYM_ENVS = {
@@ -199,9 +198,7 @@ class TestSingleTurnEnvironments(unittest.TestCase):
         else:
             output_dir.mkdir(parents=True, exist_ok=True)
 
-    def _get_oracle_answer(
-        self, env: Any, info: dict[str, Any]
-    ) -> str:
+    def _get_oracle_answer(self, env: Any, info: dict[str, Any]) -> str:
         """Retrieve oracle answer from environment or info dict.
 
         Different benchmark suites store oracle answers in different locations:
@@ -329,7 +326,9 @@ class TestSingleTurnEnvironments(unittest.TestCase):
 
         self.assertIn(agent_id, reward_dict)
         self.assertIn(agent_id, terminated_dict)
-        self.assertTrue(terminated_dict[agent_id], f"{env_id}: not terminated after step")
+        self.assertTrue(
+            terminated_dict[agent_id], f"{env_id}: not terminated after step"
+        )
         self.assertIsInstance(reward_dict[agent_id], float)
         self.assertAlmostEqual(
             reward_dict[agent_id],
@@ -385,7 +384,9 @@ class TestSingleTurnEnvironments(unittest.TestCase):
             # These give scores based on correctness ratio, not strict 0/1
             config = PARTIAL_CREDIT_ENVS[env_id]
             max_allowed = config["max_wrong_reward"]
-            allow_alternative_solutions = config.get("allow_alternative_solutions", False)
+            allow_alternative_solutions = config.get(
+                "allow_alternative_solutions", False
+            )
 
             # For environments that don't accept alternative solutions,
             # perturbed answer should not get full credit
@@ -455,6 +456,7 @@ def _make_test_method(env_id: str, env_name: str):
     Returns:
         Test method function
     """
+
     def test_method(self):
         self._test_env(env_id, env_name)
 

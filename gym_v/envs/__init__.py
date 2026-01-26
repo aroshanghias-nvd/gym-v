@@ -1603,3 +1603,19 @@ register(
         num_players=2,
     ),
 )
+
+# VLMEvalKit environment
+register(
+    id="VLMEval-Base-v0",
+    entry_point="gym_v.envs.eval.vlmeval:VLMEvalEnv",
+    max_episode_steps=1,
+    kwargs={},
+)
+
+# GenEval T2I environment
+register(
+    id="GenEval-v0",
+    entry_point="gym_v.envs.eval.t2ieval:GenevalEnv",
+    max_episode_steps=1,
+    kwargs=dict(),
+)

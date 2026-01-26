@@ -25,6 +25,9 @@ build-backend = "setuptools.build_meta"
 include = ["gym_v", "gym_v.*"]
 
 [project.optional-dependencies]
+vlmeval = [
+    "vlmeval @ git+https://github.com/open-compass/VLMEvalKit.git@v0.2",
+]
 textarena = [
     "textarena>=0.7.4",
 ]

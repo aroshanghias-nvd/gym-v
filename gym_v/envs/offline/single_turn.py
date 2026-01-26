@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from PIL import Image
-
 from gym_v import Env, Observation, get_logger
 from gym_v.envs.offline.grader import GRADER_REGISTRY
 from gym_v.envs.offline.sampler import IndexSampler
