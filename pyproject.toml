@@ -37,12 +37,20 @@ reasoning-gym = [
 minigrid = [
     "minigrid>=2.5.0",
 ]
+miniworld = [
+    "miniworld @ git+https://github.com/Farama-Foundation/Miniworld.git",
+]
 
 stable-retro = [
     "stable-retro>=0.9.8",
 ]
 pettingzoo = [
     "pettingzoo[classic]>=1.25.0",
+]
+browsergym = [
+    "browsergym-core>=0.14.3",
+    "browsergym-miniwob>=0.14.3",
+    "playwright>=1.44.0",
 ]
 
 [dependency-groups]

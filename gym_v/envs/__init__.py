@@ -1608,3 +1608,186 @@ register(
     max_episode_steps=1,
     kwargs=dict(),
 )
+
+# MiniWoB environments (from BrowserGym)
+# MiniWoB++ is a benchmark suite of 125 web interaction tasks
+# All tasks are registered automatically from the tasks configuration
+from gym_v.envs.miniwob.tasks import MINIWOB_TASKS
+
+for task_name, config in MINIWOB_TASKS.items():
+    # Convert task-name to TaskName format for environment ID
+    env_name = "".join(word.capitalize() for word in task_name.split("-"))
+    register(
+        id=f"MiniWoB/{env_name}-v0",
+        entry_point="gym_v.envs.miniwob.adapter:MiniWoBAdapter",
+        max_episode_steps=config["max_steps"],
+        kwargs=dict(
+            task_name=task_name,
+            action_subsets=config["actions"],
+            headless=True,
+            num_players=1,
+        ),
+    )
+
+# MiniWorld environments (3D navigation)
+# These require miniworld to be installed: uv sync --extra miniworld
+register(
+    id="MiniWorld/Hallway-v0",
+    entry_point="gym_v.envs.miniworld.hallway:MiniWorldHallwayEnv",
+    max_episode_steps=400,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/Maze-v0",
+    entry_point="gym_v.envs.miniworld.maze:MiniWorldMazeEnv",
+    max_episode_steps=1000,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/MazeS2-v0",
+    entry_point="gym_v.envs.miniworld.maze:MiniWorldMazeS2Env",
+    max_episode_steps=500,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/MazeS3-v0",
+    entry_point="gym_v.envs.miniworld.maze:MiniWorldMazeS3Env",
+    max_episode_steps=800,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/MazeS3Fast-v0",
+    entry_point="gym_v.envs.miniworld.maze:MiniWorldMazeS3FastEnv",
+    max_episode_steps=600,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/OneRoom-v0",
+    entry_point="gym_v.envs.miniworld.oneroom:MiniWorldOneRoomEnv",
+    max_episode_steps=400,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/OneRoomS6-v0",
+    entry_point="gym_v.envs.miniworld.oneroom:MiniWorldOneRoomS6Env",
+    max_episode_steps=600,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/OneRoomS6Fast-v0",
+    entry_point="gym_v.envs.miniworld.oneroom:MiniWorldOneRoomS6FastEnv",
+    max_episode_steps=400,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/PickupObjects-v0",
+    entry_point="gym_v.envs.miniworld.pickup:MiniWorldPickupObjectsEnv",
+    max_episode_steps=1000,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/PutNext-v0",
+    entry_point="gym_v.envs.miniworld.putnext:MiniWorldPutNextEnv",
+    max_episode_steps=1000,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/CollectHealth-v0",
+    entry_point="gym_v.envs.miniworld.collecthealth:MiniWorldCollectHealthEnv",
+    max_episode_steps=1000,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/FourRooms-v0",
+    entry_point="gym_v.envs.miniworld.rooms:MiniWorldFourRoomsEnv",
+    max_episode_steps=1000,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/ThreeRooms-v0",
+    entry_point="gym_v.envs.miniworld.rooms:MiniWorldThreeRoomsEnv",
+    max_episode_steps=800,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/RoomObjects-v0",
+    entry_point="gym_v.envs.miniworld.rooms:MiniWorldRoomObjectsEnv",
+    max_episode_steps=800,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/TMaze-v0",
+    entry_point="gym_v.envs.miniworld.tmaze:MiniWorldTMazeEnv",
+    max_episode_steps=500,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/TMazeLeft-v0",
+    entry_point="gym_v.envs.miniworld.tmaze:MiniWorldTMazeLeftEnv",
+    max_episode_steps=500,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/TMazeRight-v0",
+    entry_point="gym_v.envs.miniworld.tmaze:MiniWorldTMazeRightEnv",
+    max_episode_steps=500,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/YMaze-v0",
+    entry_point="gym_v.envs.miniworld.ymaze:MiniWorldYMazeEnv",
+    max_episode_steps=500,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/YMazeLeft-v0",
+    entry_point="gym_v.envs.miniworld.ymaze:MiniWorldYMazeLeftEnv",
+    max_episode_steps=500,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/YMazeRight-v0",
+    entry_point="gym_v.envs.miniworld.ymaze:MiniWorldYMazeRightEnv",
+    max_episode_steps=500,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/Sidewalk-v0",
+    entry_point="gym_v.envs.miniworld.sidewalk:MiniWorldSidewalkEnv",
+    max_episode_steps=800,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/Sign-v0",
+    entry_point="gym_v.envs.miniworld.sign:MiniWorldSignEnv",
+    max_episode_steps=600,
+    kwargs=dict(num_players=1),
+)
+
+register(
+    id="MiniWorld/WallGap-v0",
+    entry_point="gym_v.envs.miniworld.wallgap:MiniWorldWallGapEnv",
+    max_episode_steps=400,
+    kwargs=dict(num_players=1),
+)
