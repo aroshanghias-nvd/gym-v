@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from importlib import resources
+import math
 from textwrap import dedent
 from typing import Any
 
@@ -69,8 +70,13 @@ class Game2048Env(Env):
 
         logger.info("Reset Game2048.")
 
-        obs = Observation(image=self.render(), text=self._get_observation_text())
-        info = {}
+        progress_info = self._progress_info()
+        obs = Observation(
+            image=self.render(),
+            text=self._get_observation_text(),
+            metadata=progress_info,
+        )
+        info = dict(progress_info)
 
         return {agent_id: obs for agent_id in self._agent_ids}, {
             agent_id: info for agent_id in self._agent_ids
@@ -87,9 +93,9 @@ class Game2048Env(Env):
     ]:
         agent_id = next(iter(self._agent_ids))
         action_str = action[agent_id]
-        info = {}
         done, _ = self._ta_env.step(action_str)
 
+        info = self._progress_info()
         info["invalid_action"] = (
             self._ta_env.state.error_count > 0
             or self._ta_env.state.game_info[0]["invalid_move"]
@@ -112,7 +118,11 @@ class Game2048Env(Env):
             terminated = False
             truncated = False
 
-        obs = Observation(image=self.render(), text=self._get_observation_text())
+        obs = Observation(
+            image=self.render(),
+            text=self._get_observation_text(),
+            metadata=self._progress_info(),
+        )
 
         return (
             {agent_id: obs for agent_id in self._agent_ids},
@@ -230,3 +240,47 @@ class Game2048Env(Env):
         obs_text = "\n".join(obs_text) if obs_text else None
 
         return obs_text
+
+    def _progress_info(self) -> dict[str, Any]:
+        """Return structured 2048 progress for wrappers and reward shaping."""
+
+        board = [
+            [int(cell) for cell in row]
+            for row in self._ta_env.state.game_state["board"]
+        ]
+        max_tile = max((cell for row in board for cell in row), default=0)
+        progress = (
+            min(max(math.log2(max_tile) / math.log2(self._target_tile), 0.0), 1.0)
+            if max_tile > 0
+            else 0.0
+        )
+        info = {
+            "board": board,
+            "max_tile": max_tile,
+            "target_tile": self._target_tile,
+            "target_progress": progress,
+        }
+        score = self._score()
+        if score is not None:
+            info["score"] = score
+        return info
+
+    def _score(self) -> float | None:
+        """Best-effort score extraction from TextArena's 2048 state."""
+
+        game_state = self._ta_env.state.game_state
+        for key in ("score", "total_score"):
+            value = game_state.get(key)
+            if isinstance(value, bool):
+                continue
+            if isinstance(value, int | float):
+                return float(value)
+
+        game_info = self._ta_env.state.game_info[0]
+        for key in ("score", "total_score"):
+            value = game_info.get(key)
+            if isinstance(value, bool):
+                continue
+            if isinstance(value, int | float):
+                return float(value)
+        return None
