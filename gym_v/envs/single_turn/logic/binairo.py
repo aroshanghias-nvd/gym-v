@@ -6,7 +6,6 @@ from importlib import resources
 from textwrap import dedent
 from typing import Any
 
-import numpy as np
 from PIL import Image, ImageDraw
 
 from gym_v import Env, Observation, get_logger
@@ -26,9 +25,9 @@ class ConstraintRowBalance(Constraint):
         size = len(board)
         expected_count = size // 2
 
-        assert all(
-            all(cell != "*" for cell in row) for row in board
-        ), "'*' should be replaced by '0' in the initialization board"
+        assert all(all(cell != "*" for cell in row) for row in board), (
+            "'*' should be replaced by '0' in the initialization board"
+        )
 
         for row in board:
             if 0 not in row:  # Only check completed rows
@@ -221,11 +220,11 @@ b w w b
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
         self._seed = seed
-        if seed is not None:
-            np.random.seed(seed)
 
         # Generate a new puzzle
-        result = generate_puzzle(self._factory, self._size, self._num_hints)
+        result = generate_puzzle(
+            self._factory, self._size, self._num_hints, rng=self.py_random
+        )
         if result is None:
             raise RuntimeError(
                 f"Failed to generate Binairo puzzle with size {self._size} and {self._num_hints} hints"

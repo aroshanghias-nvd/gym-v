@@ -19,14 +19,18 @@ class PuzzleFactory:
         self.size = 0
 
     def sample_hints(
-        self, board: list[list[Any]], num_sample_hints: int
+        self,
+        board: list[list[Any]],
+        num_sample_hints: int,
+        *,
+        rng: Any | None = None,
     ) -> list[list[Any]]:
+        if rng is None:
+            rng = random
         # Create a new board filled with zeros
         new_board = [[0 for _ in range(len(board[0]))] for _ in range(len(board))]
         # Sample num_sample_hints cells to keep from the original board
-        sampled_cells = random.sample(
-            range(len(board) * len(board[0])), num_sample_hints
-        )
+        sampled_cells = rng.sample(range(len(board) * len(board[0])), num_sample_hints)
         for cell in sampled_cells:
             row = cell // len(board[0])
             col = cell % len(board[0])

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from importlib import resources
-import random
 from textwrap import dedent
 from typing import Any
 
@@ -94,10 +93,8 @@ class RubiksCubeQAEnv(Env):
     ):
         super().__init__(**kwargs)
 
-        if num_moves is None:
-            num_moves = random.randint(1, 3)
-
-        self._num_moves = num_moves
+        self._num_moves_param = num_moves
+        self._num_moves = num_moves if num_moves is not None else 1
         self._question_type_param = question_type
         self.num_players = num_players
         self._agent_ids = {f"agent_{i}" for i in range(num_players)}
@@ -153,6 +150,12 @@ class RubiksCubeQAEnv(Env):
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
 
+        self._num_moves = (
+            self._num_moves_param
+            if self._num_moves_param is not None
+            else self.py_random.randint(1, 3)
+        )
+
         # Reset cube to solved state
         self._faces = {
             "U": np.zeros((3, 3), dtype=int),
@@ -166,12 +169,14 @@ class RubiksCubeQAEnv(Env):
         # Scramble the cube
         moves = ["F", "B", "L", "R", "U", "D", "F'", "B'", "L'", "R'", "U'", "D'"]
         for _ in range(self._num_moves):
-            move = random.choice(moves)
+            move = self.py_random.choice(moves)
             self._make_move(move)
 
         # Select question type
         if self._question_type_param is None:
-            self._question_type_idx = int(self.np_random.integers(0, len(self.QUESTION_TYPES)))
+            self._question_type_idx = int(
+                self.np_random.integers(0, len(self.QUESTION_TYPES))
+            )
         else:
             self._question_type_idx = self._question_type_param
 
@@ -656,9 +661,9 @@ class RubiksCubeQAEnv(Env):
 
     def _generate_face_recognition_question(self) -> dict[str, Any]:
         """Generate question about color at a specific position."""
-        face = random.choice(list(self._faces.keys()))
-        row = random.randint(0, 2)
-        col = random.randint(0, 2)
+        face = self.py_random.choice(list(self._faces.keys()))
+        row = self.py_random.randint(0, 2)
+        col = self.py_random.randint(0, 2)
 
         color_idx = self._faces[face][row, col]
         correct_color, _ = self.COLORS[color_idx]
@@ -668,11 +673,11 @@ class RubiksCubeQAEnv(Env):
         options = [correct_color]
 
         while len(options) < 6:
-            color = random.choice(all_colors)
+            color = self.py_random.choice(all_colors)
             if color not in options:
                 options.append(color)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         answer_index = options.index(correct_color) + 1
         options_text = "\n".join(
             [f"{i + 1}. {opt.capitalize()}" for i, opt in enumerate(options)]
@@ -689,7 +694,7 @@ Options:
 
     def _generate_color_count_question(self) -> dict[str, Any]:
         """Generate question about counting colors on a face."""
-        face = random.choice(list(self._faces.keys()))
+        face = self.py_random.choice(list(self._faces.keys()))
 
         # Count colors on this face
         color_counts = {}
@@ -700,7 +705,7 @@ Options:
                 color_counts[color_name] = color_counts.get(color_name, 0) + 1
 
         # Pick a color that exists on this face
-        color = random.choice(list(color_counts.keys()))
+        color = self.py_random.choice(list(color_counts.keys()))
         count = color_counts[color]
 
         # Generate options
@@ -710,7 +715,7 @@ Options:
             if c != count and c not in options and len(options) < 8:
                 options.append(c)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         answer_index = options.index(count) + 1
         options_text = "\n".join([f"{i + 1}. {opt}" for i, opt in enumerate(options)])
 
@@ -729,18 +734,18 @@ Options:
         original_faces = {k: v.copy() for k, v in self._faces.items()}
 
         # Pick random moves
-        num_pred_moves = random.randint(1, 2)
+        num_pred_moves = self.py_random.randint(1, 2)
         moves = ["F", "B", "L", "R", "U", "D", "F'", "B'", "L'", "R'", "U'", "D'"]
-        selected_moves = [random.choice(moves) for _ in range(num_pred_moves)]
+        selected_moves = [self.py_random.choice(moves) for _ in range(num_pred_moves)]
 
         # Apply moves
         for move in selected_moves:
             self._make_move(move)
 
         # Pick a random position to ask about
-        face = random.choice(list(self._faces.keys()))
-        row = random.randint(0, 2)
-        col = random.randint(0, 2)
+        face = self.py_random.choice(list(self._faces.keys()))
+        row = self.py_random.randint(0, 2)
+        col = self.py_random.randint(0, 2)
 
         color_idx = self._faces[face][row, col]
         correct_color, _ = self.COLORS[color_idx]
@@ -753,11 +758,11 @@ Options:
         options = [correct_color]
 
         while len(options) < 6:
-            color = random.choice(all_colors)
+            color = self.py_random.choice(all_colors)
             if color not in options:
                 options.append(color)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         answer_index = options.index(correct_color) + 1
         options_text = "\n".join(
             [f"{i + 1}. {opt.capitalize()}" for i, opt in enumerate(options)]

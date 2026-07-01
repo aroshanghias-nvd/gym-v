@@ -6,7 +6,6 @@ from importlib import resources
 from textwrap import dedent
 from typing import Any
 
-import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from gym_v import Env, Observation, get_logger
@@ -235,8 +234,6 @@ e e e e e
         """Reset the environment."""
         super().reset(seed=seed, options=options)
         self._seed = seed
-        if seed is not None:
-            np.random.seed(seed)
 
         # Generate thermometers configuration
         self._thermometers = self._generate_thermometers()
@@ -269,7 +266,11 @@ e e e e e
         # Need to ensure clues dict is present for ConstraintThermometerFill
         clues_only_thermo = {"thermometers": self._thermometers}
         result = generate_puzzle(
-            self._factory, self._size, num_hints=0, clues=clues_only_thermo
+            self._factory,
+            self._size,
+            num_hints=0,
+            clues=clues_only_thermo,
+            rng=self.py_random,
         )
 
         # Restore constraints
@@ -318,14 +319,14 @@ e e e e e
         used_cells = set()
 
         # Generate 3-5 thermometers
-        num_thermos = np.random.randint(3, min(6, self._size + 1))
+        num_thermos = int(self.np_random.integers(3, min(6, self._size + 1)))
 
         for _ in range(num_thermos):
             # Random starting position
             attempts = 0
             while attempts < 50:
-                start_r = np.random.randint(0, self._size)
-                start_c = np.random.randint(0, self._size)
+                start_r = int(self.np_random.integers(0, self._size))
+                start_c = int(self.np_random.integers(0, self._size))
 
                 if (start_r, start_c) in used_cells:
                     attempts += 1
@@ -336,7 +337,7 @@ e e e e e
                 used_cells.add((start_r, start_c))
 
                 # Random length 2-4
-                length = np.random.randint(2, min(5, self._size))
+                length = int(self.np_random.integers(2, min(5, self._size)))
 
                 # Random direction
                 for _step in range(1, length):
@@ -344,7 +345,7 @@ e e e e e
 
                     # Try directions: right, down, left, up
                     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-                    np.random.shuffle(directions)
+                    self.np_random.shuffle(directions)
 
                     added = False
                     for dr, dc in directions:

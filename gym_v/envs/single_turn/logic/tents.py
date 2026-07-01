@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from importlib import resources
-import random
 from textwrap import dedent
 from typing import Any
 
@@ -116,21 +115,10 @@ class TentsQAEnv(Env):
     ):
         super().__init__(**kwargs)
 
-        # Default grid size and num_trees based on difficulty
-        if grid_size is None or num_trees is None:
-            difficulty = random.choice(["Easy", "Medium", "Hard"])
-            if difficulty == "Easy":
-                self._grid_size = (7, 7)
-                self._num_trees = 5
-            elif difficulty == "Medium":
-                self._grid_size = (10, 10)
-                self._num_trees = 10
-            else:  # Hard
-                self._grid_size = (13, 13)
-                self._num_trees = 17
-        else:
-            self._grid_size = grid_size
-            self._num_trees = num_trees
+        self._grid_size_param = grid_size
+        self._num_trees_param = num_trees
+        self._grid_size = grid_size if grid_size is not None else (7, 7)
+        self._num_trees = num_trees if num_trees is not None else 5
 
         self._cell_size = cell_size
         self._question_type_param = question_type
@@ -190,12 +178,26 @@ Grid (T=tree, X=tent, .=empty):
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
 
+        if self._grid_size_param is None or self._num_trees_param is None:
+            difficulty = self.py_random.choice(["Easy", "Medium", "Hard"])
+            defaults = {
+                "Easy": ((7, 7), 5),
+                "Medium": ((10, 10), 10),
+                "Hard": ((13, 13), 17),
+            }
+            self._grid_size, self._num_trees = defaults[difficulty]
+        else:
+            self._grid_size = self._grid_size_param
+            self._num_trees = self._num_trees_param
+
         # Generate puzzle
         self._generate_puzzle()
 
         # Select question type
         if self._question_type_param is None:
-            self._question_type_idx = int(self.np_random.integers(0, len(self.QUESTION_TYPES)))
+            self._question_type_idx = int(
+                self.np_random.integers(0, len(self.QUESTION_TYPES))
+            )
         else:
             self._question_type_idx = self._question_type_param
 
@@ -467,7 +469,10 @@ Grid (T=tree, X=tent, .=empty):
             # Place trees
             self._tree_positions = set()
             while len(self._tree_positions) < self._num_trees:
-                x, y = random.randint(0, width - 1), random.randint(0, height - 1)
+                x, y = (
+                    self.py_random.randint(0, width - 1),
+                    self.py_random.randint(0, height - 1),
+                )
                 if self._grid[x][y] == "":
                     potential_positions = [
                         (x + 1, y),
@@ -490,9 +495,9 @@ Grid (T=tree, X=tent, .=empty):
             self._tent_positions = set()
             trying_times = 0
             while len(self._tent_positions) < self._num_trees:
-                x, y = random.choice(list(self._tree_positions))
+                x, y = self.py_random.choice(sorted(self._tree_positions))
                 potential_positions = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
-                random.shuffle(potential_positions)
+                self.py_random.shuffle(potential_positions)
                 for tx, ty in potential_positions:
                     if 0 <= ty < width and 0 <= tx < height and tent_available[tx][ty]:
                         self._grid[tx][ty] = "X"
@@ -526,14 +531,12 @@ Grid (T=tree, X=tent, .=empty):
             self._row_tent_counts[tx] += 1
             self._col_tent_counts[ty] += 1
 
-        # Sort positions
-        self._tree_positions = set(sorted(list(self._tree_positions)))
-        self._tent_positions = set(sorted(list(self._tent_positions)))
-
         # Randomly remove some tents
         max_remove = max(2, len(self._tent_positions) // 3)
-        num_to_remove = random.randint(1, max_remove)
-        removed_tents = random.sample(list(self._tent_positions), num_to_remove)
+        num_to_remove = self.py_random.randint(1, max_remove)
+        removed_tents = self.py_random.sample(
+            sorted(self._tent_positions), num_to_remove
+        )
         for tx, ty in removed_tents:
             self._grid[tx][ty] = ""
             self._tent_positions.remove((tx, ty))
@@ -541,7 +544,7 @@ Grid (T=tree, X=tent, .=empty):
     def _generate_num_tents_in_row_question(self) -> dict[str, Any]:
         """Generate question about number of tents in a row."""
         height = self._grid_size[1]
-        row_to_ask = random.randint(0, height - 1)
+        row_to_ask = self.py_random.randint(0, height - 1)
 
         # Count tents in the row
         tents_in_row = [(tx, ty) for tx, ty in self._tent_positions if tx == row_to_ask]
@@ -557,7 +560,7 @@ Grid (T=tree, X=tent, .=empty):
     def _generate_missing_tents_in_column_question(self) -> dict[str, Any]:
         """Generate question about missing tents in a column."""
         width = self._grid_size[0]
-        col_to_ask = random.randint(0, width - 1)
+        col_to_ask = self.py_random.randint(0, width - 1)
 
         # Count current tents in the column
         current_tents = len(
@@ -635,14 +638,14 @@ Grid (T=tree, X=tent, .=empty):
         num_options = 8
 
         # Select correct answer
-        correct_option = random.choice(list(self._tree_positions))
+        correct_option = self.py_random.choice(sorted(self._tree_positions))
 
         # Generate wrong options
         options = [correct_option]
         while len(options) < num_options:
             random_position = (
-                random.randint(0, height - 1),
-                random.randint(0, width - 1),
+                self.py_random.randint(0, height - 1),
+                self.py_random.randint(0, width - 1),
             )
             if (
                 random_position not in options
@@ -650,7 +653,7 @@ Grid (T=tree, X=tent, .=empty):
             ):
                 options.append(random_position)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
 
         # Find correct answer index
         correct_answer = options.index(correct_option) + 1
@@ -679,21 +682,21 @@ Grid (T=tree, X=tent, .=empty):
             # If no valid positions, create a dummy question
             correct_option = (0, 0)
         else:
-            correct_option = random.choice(valid_positions)
+            correct_option = self.py_random.choice(valid_positions)
 
         # Generate wrong options
         options = [correct_option]
         while len(options) < num_options:
             random_position = (
-                random.randint(0, height - 1),
-                random.randint(0, width - 1),
+                self.py_random.randint(0, height - 1),
+                self.py_random.randint(0, width - 1),
             )
             if random_position not in options and not self._is_valid_new_tent_position(
                 random_position[0], random_position[1]
             ):
                 options.append(random_position)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
 
         # Find correct answer index
         correct_answer = options.index(correct_option) + 1

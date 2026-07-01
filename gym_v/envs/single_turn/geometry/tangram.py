@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import colorsys
 from importlib import resources
-import random
 from textwrap import dedent
 from typing import Any
 
@@ -123,23 +122,20 @@ class TangramQAEnv(Env):
     ):
         super().__init__(**kwargs)
 
-        # Random configuration if not specified
-        if grid_size is None:
-            grid_size = random.randint(5, 10)
-        if num_seeds is None:
-            num_seeds = random.randint(4, 8)
-        if num_pieces_to_remove is None:
-            num_pieces_to_remove = random.randint(1, 3)
-
-        self._grid_size = grid_size
-        self._num_seeds = num_seeds
-        self._num_pieces_to_remove = num_pieces_to_remove
+        self._grid_size_param = grid_size
+        self._num_seeds_param = num_seeds
+        self._num_pieces_to_remove_param = num_pieces_to_remove
+        self._grid_size = grid_size if grid_size is not None else 5
+        self._num_seeds = num_seeds if num_seeds is not None else 4
+        self._num_pieces_to_remove = (
+            num_pieces_to_remove if num_pieces_to_remove is not None else 1
+        )
         self._question_type_param = question_type
         self.num_players = num_players
         self._agent_ids = {f"agent_{i}" for i in range(num_players)}
 
         # Game state
-        self._grid: np.ndarray = np.zeros((grid_size, grid_size), dtype=int)
+        self._grid: np.ndarray = np.zeros((self._grid_size, self._grid_size), dtype=int)
         self._seeds: list[tuple[int, int]] = []
         self._pieces: list[dict[str, Any]] = []
         self._removed_pieces: list[int] = []
@@ -184,12 +180,31 @@ class TangramQAEnv(Env):
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
 
+        self._grid_size = (
+            self._grid_size_param
+            if self._grid_size_param is not None
+            else self.py_random.randint(5, 10)
+        )
+        self._num_seeds = (
+            self._num_seeds_param
+            if self._num_seeds_param is not None
+            else self.py_random.randint(4, 8)
+        )
+        self._num_pieces_to_remove = (
+            self._num_pieces_to_remove_param
+            if self._num_pieces_to_remove_param is not None
+            else self.py_random.randint(1, 3)
+        )
+        self._grid = np.zeros((self._grid_size, self._grid_size), dtype=int)
+
         # Generate puzzle
         self._generate_puzzle()
 
         # Select question type
         if self._question_type_param is None:
-            self._question_type_idx = int(self.np_random.integers(0, len(self.QUESTION_TYPES)))
+            self._question_type_idx = int(
+                self.np_random.integers(0, len(self.QUESTION_TYPES))
+            )
         else:
             self._question_type_idx = self._question_type_param
 
@@ -451,8 +466,8 @@ class TangramQAEnv(Env):
         self._seeds = []
         points = []
         while len(points) < self._num_seeds:
-            x = random.randint(0, self._grid_size - 1)
-            y = random.randint(0, self._grid_size - 1)
+            x = self.py_random.randint(0, self._grid_size - 1)
+            y = self.py_random.randint(0, self._grid_size - 1)
             if (x, y) not in points:
                 points.append((x, y))
         self._seeds = points
@@ -500,7 +515,7 @@ class TangramQAEnv(Env):
 
         # Remove random pieces
         available_pieces = list(range(1, self._num_seeds + 1))
-        self._removed_pieces = random.sample(
+        self._removed_pieces = self.py_random.sample(
             available_pieces, self._num_pieces_to_remove
         )
         for piece_id in self._removed_pieces:
@@ -562,7 +577,7 @@ class TangramQAEnv(Env):
         options = list(range(max(0, unique_pieces - 4), unique_pieces + 5))
         while len(options) < 8:
             options.append(options[-1] + 1)
-        random.shuffle(options)
+        self.py_random.shuffle(options)
 
         correct_answer = options.index(unique_pieces) + 1
         options_text = "\n".join([f"{i + 1}: {opt}" for i, opt in enumerate(options)])
@@ -583,12 +598,12 @@ Options:
         if not active_pieces:
             return self._generate_piece_count_question()
 
-        target_piece = random.choice(active_pieces)
+        target_piece = self.py_random.choice(active_pieces)
         target_area = int(np.sum(self._grid == target_piece))
 
         # Generate options
         possible_areas = list(range(max(1, target_area - 6), target_area + 6))
-        options = random.sample(possible_areas, min(8, len(possible_areas)))
+        options = self.py_random.sample(possible_areas, min(8, len(possible_areas)))
         if target_area not in options:
             options[0] = target_area
         options = sorted(options)
@@ -613,7 +628,7 @@ Options:
         if len(active_pieces) < 2:
             return self._generate_piece_count_question()
 
-        target_piece = random.choice(active_pieces)
+        target_piece = self.py_random.choice(active_pieces)
 
         # Find adjacent pieces
         adjacent_pieces = self._get_adjacent_pieces(target_piece)
@@ -629,7 +644,7 @@ Options:
                 options.append(next_val)
             else:
                 break
-        random.shuffle(options)
+        self.py_random.shuffle(options)
 
         correct_answer = options.index(correct_count) + 1
         options_text = "\n".join([f"{i + 1}: {opt}" for i, opt in enumerate(options)])
@@ -664,12 +679,12 @@ Options:
 
         # For simplicity, randomly choose one answer
         # In real implementation, would check actual fit
-        correct_description = random.choice(
+        correct_description = self.py_random.choice(
             rotation_descriptions[:4]
         )  # Simpler answers
 
         options = rotation_descriptions.copy()
-        random.shuffle(options)
+        self.py_random.shuffle(options)
 
         correct_answer = options.index(correct_description) + 1
         options_text = "\n".join([f"{i + 1}: {opt}" for i, opt in enumerate(options)])
@@ -712,13 +727,13 @@ Options:
         if not available_positions:
             return self._generate_piece_count_question()
 
-        answer_pos = random.choice(available_positions)
+        answer_pos = self.py_random.choice(available_positions)
         answer_str = f"({answer_pos[0]}, {answer_pos[1]})"
 
         # Generate options
-        unique_positions = list(set(available_positions))
+        unique_positions = sorted(set(available_positions))
         if len(unique_positions) > 8:
-            options_positions = random.sample(unique_positions, 8)
+            options_positions = self.py_random.sample(unique_positions, 8)
         else:
             options_positions = unique_positions
 
@@ -726,7 +741,7 @@ Options:
         if answer_pos not in options_positions:
             options_positions[0] = answer_pos
 
-        random.shuffle(options_positions)
+        self.py_random.shuffle(options_positions)
         options = [f"({pos[0]}, {pos[1]})" for pos in options_positions]
         correct_answer = options.index(answer_str) + 1
         options_text = "\n".join([f"{i + 1}: {opt}" for i, opt in enumerate(options)])

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from enum import Enum
 from importlib import resources
-import random
 from textwrap import dedent
 from typing import Any
 
@@ -129,16 +128,16 @@ class FreecellQAEnv(Env):
     ):
         super().__init__(**kwargs)
 
-        if cascade_number is None:
-            cascade_number = random.choice([4, 6, 8])
-
-        self._cascade_number = cascade_number
+        self._cascade_number_param = cascade_number
+        self._cascade_number = cascade_number if cascade_number is not None else 4
         self._question_type_param = question_type
         self.num_players = num_players
         self._agent_ids = {f"agent_{i}" for i in range(num_players)}
 
         # Game state
-        self._cascade_piles: list[list[Card]] = [[] for _ in range(cascade_number)]
+        self._cascade_piles: list[list[Card]] = [
+            [] for _ in range(self._cascade_number)
+        ]
         self._free_cells: list[Card | None] = [None] * 4
         self._foundation_piles: dict[Suit, list[Card]] = {suit: [] for suit in Suit}
 
@@ -210,12 +209,20 @@ class FreecellQAEnv(Env):
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
 
+        self._cascade_number = (
+            self._cascade_number_param
+            if self._cascade_number_param is not None
+            else self.py_random.choice([4, 6, 8])
+        )
+
         # Initialize game
         self._initialize_game()
 
         # Select question type
         if self._question_type_param is None:
-            self._question_type_idx = int(self.np_random.integers(0, len(self.QUESTION_TYPES)))
+            self._question_type_idx = int(
+                self.np_random.integers(0, len(self.QUESTION_TYPES))
+            )
         else:
             if not (0 <= self._question_type_param < len(self.QUESTION_TYPES)):
                 raise ValueError(
@@ -613,7 +620,7 @@ class FreecellQAEnv(Env):
         """Initialize a new FreeCell game."""
         # Create deck
         cards = [Card(suit, value) for suit in Suit for value in range(1, 14)]
-        random.shuffle(cards)
+        self.py_random.shuffle(cards)
 
         # Deal cards to cascade piles
         self._cascade_piles = [[] for _ in range(self._cascade_number)]
@@ -635,8 +642,8 @@ class FreecellQAEnv(Env):
             # Fallback - shouldn't happen
             return {"question": "Error", "answer": "1", "options": ["Error"]}
 
-        cascade_index, selected_pile = random.choice(non_empty_piles)
-        n = random.randint(1, len(selected_pile))
+        cascade_index, selected_pile = self.py_random.choice(non_empty_piles)
+        n = self.py_random.randint(1, len(selected_pile))
         selected_card = selected_pile[-n]
 
         # Generate options
@@ -646,12 +653,12 @@ class FreecellQAEnv(Env):
         # Add distractor options
         all_cards = [card for pile in self._cascade_piles for card in pile]
         while len(options) < 8 and len(all_cards) > 0:
-            card = random.choice(all_cards)
+            card = self.py_random.choice(all_cards)
             option = f"({self.SUIT_TO_STRING[card.suit.value]}, {self.VALUE_MAP[card.value]})"
             if option not in options:
                 options.append(option)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         answer_index = options.index(correct_answer) + 1
         options_text = "\n".join([f"{i + 1}. {opt}" for i, opt in enumerate(options)])
 
@@ -676,7 +683,7 @@ Options:
             # No valid moves, fallback to specified card question
             return self._generate_specified_card_question()
 
-        correct_move = random.choice(valid_moves)
+        correct_move = self.py_random.choice(valid_moves)
 
         # Format correct option
         from_str = correct_move["from"]
@@ -689,32 +696,32 @@ Options:
         # Generate invalid moves as distractors
         while len(options) < 4:
             # Random source and dest
-            source_type = random.choice(["Cascade", "FreeCell"])
+            source_type = self.py_random.choice(["Cascade", "FreeCell"])
             if source_type == "Cascade":
-                source_idx = random.randint(0, self._cascade_number - 1)
+                source_idx = self.py_random.randint(0, self._cascade_number - 1)
                 source = f"Cascade {source_idx}"
             else:
-                source_idx = random.randint(0, 3)
+                source_idx = self.py_random.randint(0, 3)
                 source = f"FreeCell {source_idx}"
 
-            dest_type = random.choice(["Cascade", "FreeCell", "Foundation"])
+            dest_type = self.py_random.choice(["Cascade", "FreeCell", "Foundation"])
             if dest_type == "Cascade":
-                dest_idx = random.randint(0, self._cascade_number - 1)
+                dest_idx = self.py_random.randint(0, self._cascade_number - 1)
                 dest = f"Cascade {dest_idx}"
             elif dest_type == "FreeCell":
-                dest_idx = random.randint(0, 3)
+                dest_idx = self.py_random.randint(0, 3)
                 dest = f"FreeCell {dest_idx}"
             else:
-                suit = random.choice(list(Suit))
+                suit = self.py_random.choice(list(Suit))
                 dest = f"Foundation {self.SUIT_TO_STRING[suit.value]}"
 
             if all_cards := [card for pile in self._cascade_piles for card in pile]:
-                rand_card = random.choice(all_cards)
+                rand_card = self.py_random.choice(all_cards)
                 option = f"Move ({self.SUIT_TO_STRING[rand_card.suit.value]},{self.VALUE_MAP[rand_card.value]}) from {source} to {dest}"
                 if option not in options and option != correct_option:
                     options.append(option)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         answer_index = options.index(correct_option) + 1
         options_text = "\n".join([f"{i + 1}. {opt}" for i, opt in enumerate(options)])
 
@@ -741,7 +748,7 @@ Options:
         if not cascade_moves:
             return self._generate_specified_card_question()
 
-        selected_move = random.choice(cascade_moves)
+        selected_move = self.py_random.choice(cascade_moves)
         cascade_index = int(selected_move["from"].split()[-1])
         selected_pile = self._cascade_piles[cascade_index]
 
@@ -756,12 +763,12 @@ Options:
         # Add distractor options
         all_cards = [card for pile in self._cascade_piles for card in pile]
         while len(options) < 8 and len(all_cards) > 0:
-            card = random.choice(all_cards)
+            card = self.py_random.choice(all_cards)
             option = f"({self.SUIT_TO_STRING[card.suit.value]}, {self.VALUE_MAP[card.value]})"
             if option not in options:
                 options.append(option)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         answer_index = options.index(answer_text) + 1
         options_text = "\n".join([f"{i + 1}. {opt}" for i, opt in enumerate(options)])
 

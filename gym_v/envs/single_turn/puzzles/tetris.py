@@ -6,7 +6,6 @@ Single-turn Q&A environment where the model answers questions about a Tetris gam
 from __future__ import annotations
 
 from importlib import resources
-import random
 import re
 from textwrap import dedent
 from typing import Any
@@ -199,10 +198,6 @@ Grid (#=placed, *=falling, .=empty):
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
-
-        if seed is not None:
-            random.seed(seed)
-            np.random.seed(seed)
 
         # Generate game state
         self._generate_game_state()

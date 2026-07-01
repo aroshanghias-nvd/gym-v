@@ -6,7 +6,6 @@ from importlib import resources
 from textwrap import dedent
 from typing import Any
 
-import numpy as np
 from PIL import Image, ImageDraw
 
 from gym_v import Env, Observation, get_logger
@@ -208,8 +207,6 @@ Example output for a 9×9 puzzle:
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
         self._seed = seed
-        if seed is not None:
-            np.random.seed(seed)
 
         # 1. Generate Sudoku solution using generate_puzzle
         # Renzoku without hints is just a Latin Square (due to current factory constraints)
@@ -225,7 +222,12 @@ Example output for a 9×9 puzzle:
         }
 
         result = generate_puzzle(
-            self._factory, self._size, num_hints=0, hints=hints, max_attempts=1000
+            self._factory,
+            self._size,
+            num_hints=0,
+            hints=hints,
+            max_attempts=1000,
+            rng=self.py_random,
         )
         if result is None:
             raise RuntimeError("Failed to generate Renzoku solution")

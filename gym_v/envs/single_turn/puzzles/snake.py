@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from collections import deque
 from importlib import resources
-import random
 import re
 from textwrap import dedent
 from typing import Any
@@ -183,9 +182,6 @@ Grid (H=head, B=body, F=food, .=empty):
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
-
-        if seed is not None:
-            random.seed(seed)
 
         # Generate game state
         self._generate_snake()

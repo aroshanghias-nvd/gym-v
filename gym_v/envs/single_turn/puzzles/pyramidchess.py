@@ -250,7 +250,9 @@ class PyramidChessRandomGenerate:
         plot_level: str = "Medium",
         num_turns: int | None = None,
         max_turn: int | None = None,
+        rng: random.Random | None = None,
     ):
+        self._rng = rng if rng is not None else random.Random()
         if plot_level in PLOT_LEVEL:
             self.Level = PLOT_LEVEL[plot_level]
         else:
@@ -269,7 +271,7 @@ class PyramidChessRandomGenerate:
         self.Win_status = -1
 
         if rand_turn_num:
-            self.Num_turns = random.randint(0, self.Max_turn - 1)
+            self.Num_turns = self._rng.randint(0, self.Max_turn - 1)
         else:
             self.Num_turns = num_turns if num_turns is not None else 0
 
@@ -288,7 +290,7 @@ class PyramidChessRandomGenerate:
             return len(take_pos), take_pos
         else:
             num_take = len(take_pos)
-            index = random.sample(range(0, num_take), 2)
+            index = self._rng.sample(range(0, num_take), 2)
             input1 = index[0]
             input2 = index[1]
             info = [take_pos[input1], take_pos[input2]]
@@ -302,7 +304,7 @@ class PyramidChessRandomGenerate:
         if not put_pos:
             return None, [], 0
 
-        index = random.randint(0, len(put_pos) - 1)
+        index = self._rng.randint(0, len(put_pos) - 1)
         put_pos[index].put(self.Turn)
         put_info = put_pos[index]
         self.Balls[self.Turn] -= 1
@@ -696,7 +698,7 @@ class PyramidChessQAEnv(Env):
 
         # Generate random game state
         self._game_gen = PyramidChessRandomGenerate(
-            rand_turn_num=True, plot_level=self.plot_level
+            rand_turn_num=True, plot_level=self.plot_level, rng=self.py_random
         )
         self._board = self._game_gen.random_game()
 
@@ -823,7 +825,7 @@ class PyramidChessQAEnv(Env):
         if not position_table:
             raise ValueError("Empty position table")
 
-        answer_item = random.choice(position_table)
+        answer_item = self.py_random.choice(position_table)
         level, position = answer_item.Level, answer_item.Position
 
         question = f"What is the status of the ball on Level {level}, which has coordinate {position}?"
@@ -856,11 +858,11 @@ class PyramidChessQAEnv(Env):
         if not position_table:
             raise ValueError("Empty position table")
 
-        answer_item = random.choice(position_table)
+        answer_item = self.py_random.choice(position_table)
         level, position = answer_item.Level, answer_item.Position
 
         COLOR = ["blue", "red"]
-        color_ind = random.choice([0, 1])
+        color_ind = self.py_random.choice([0, 1])
         color = COLOR[color_ind]
 
         question = f"Can a ball be placed at coordinate {position} on Level {level}? If a {color} ball is placed there, what would be the outcome?"
@@ -912,7 +914,7 @@ class PyramidChessQAEnv(Env):
         if not position_table:
             raise ValueError("Empty position table")
 
-        answer_item = random.choice(position_table)
+        answer_item = self.py_random.choice(position_table)
         level, position = answer_item.Level, answer_item.Position
 
         # Calculate steps needed
@@ -949,7 +951,7 @@ class PyramidChessQAEnv(Env):
         if not legal_positions:
             # Regenerate
             self._game_gen = PyramidChessRandomGenerate(
-                rand_turn_num=True, plot_level=self.plot_level
+                rand_turn_num=True, plot_level=self.plot_level, rng=self.py_random
             )
             self._board = self._game_gen.random_game()
             return self._generate_best_position_question()
@@ -967,7 +969,7 @@ class PyramidChessQAEnv(Env):
                 break
 
         if best_pos is None:
-            best_pos = random.choice(legal_positions)
+            best_pos = self.py_random.choice(legal_positions)
 
         turn = self._game_gen.Turn
         PLAYER = ["PLAYER_0", "PLAYER_1"]
@@ -1008,7 +1010,7 @@ class PyramidChessQAEnv(Env):
         if not position_table:
             raise ValueError("Empty position table")
 
-        answer_item = random.choice(position_table)
+        answer_item = self.py_random.choice(position_table)
         level, position = answer_item.Level, answer_item.Position
 
         # Determine status

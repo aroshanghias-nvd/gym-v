@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from importlib import resources
-import random
 import string
 from textwrap import dedent
 from typing import Any
@@ -168,7 +167,9 @@ Grid (uppercase letters):
             self._question_type_idx = self._question_type_param
             q_type = self.QUESTION_TYPES[self._question_type_idx]
         else:
-            self._question_type_idx = int(self.np_random.integers(0, len(self.QUESTION_TYPES)))
+            self._question_type_idx = int(
+                self.np_random.integers(0, len(self.QUESTION_TYPES))
+            )
             q_type = self.QUESTION_TYPES[self._question_type_idx]
 
         self._current_q_type = q_type
@@ -177,7 +178,7 @@ Grid (uppercase letters):
         if self._grid_size_param is not None:
             self._grid_size = self._grid_size_param
         else:
-            self._grid_size = random.randint(5, 8)
+            self._grid_size = self.py_random.randint(5, 8)
 
         # Generate grid
         self._generate_grid()
@@ -340,7 +341,10 @@ Grid (uppercase letters):
     def _generate_grid(self) -> None:
         """Generate a random grid filled with random uppercase letters."""
         self._grid = [
-            [random.choice(string.ascii_uppercase) for _ in range(self._grid_size)]
+            [
+                self.py_random.choice(string.ascii_uppercase)
+                for _ in range(self._grid_size)
+            ]
             for _ in range(self._grid_size)
         ]
 
@@ -388,18 +392,18 @@ Grid (uppercase letters):
 
     def _generate_cell_letter_question(self) -> None:
         """Generate question about the letter at a specific cell (Easy, MCQ)."""
-        row = random.randint(0, self._grid_size - 1)
-        col = random.randint(0, self._grid_size - 1)
+        row = self.py_random.randint(0, self._grid_size - 1)
+        col = self.py_random.randint(0, self._grid_size - 1)
         correct_letter = self._grid[row][col]
 
         # Generate options
         options = [correct_letter]
         while len(options) < 8:
-            letter = random.choice(string.ascii_uppercase)
+            letter = self.py_random.choice(string.ascii_uppercase)
             if letter not in options:
                 options.append(letter)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         correct_idx = options.index(correct_letter) + 1
 
         # Format question - separate question and options
@@ -409,19 +413,19 @@ Grid (uppercase letters):
 
     def _generate_letter_count_question(self) -> None:
         """Generate question about counting a specific letter (Medium, MCQ)."""
-        letter = random.choice(string.ascii_uppercase)
+        letter = self.py_random.choice(string.ascii_uppercase)
         count = sum(row.count(letter) for row in self._grid)
 
         # Generate options
         options = [count]
         upper = 2
         while len(options) < 8:
-            fake_count = random.randint(0, upper)
+            fake_count = self.py_random.randint(0, upper)
             upper += 1
             if fake_count not in options:
                 options.append(fake_count)
 
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         correct_idx = options.index(count) + 1
 
         # Format question - separate question and options
@@ -434,7 +438,9 @@ Grid (uppercase letters):
     def _generate_word_direction_question(self) -> None:
         """Generate question about word direction from a starting position (Medium, MCQ)."""
         # Select a word
-        word = random.choice([w for w in self._words if 3 <= len(w) <= self._grid_size])
+        word = self.py_random.choice(
+            [w for w in self._words if 3 <= len(w) <= self._grid_size]
+        )
 
         # Find valid placements
         valid_placements = []
@@ -450,12 +456,14 @@ Grid (uppercase letters):
             return
 
         # Choose random placement
-        start_row, start_col, dir_name, direction = random.choice(valid_placements)
+        start_row, start_col, dir_name, direction = self.py_random.choice(
+            valid_placements
+        )
         self._insert_word(word, start_row, start_col, direction)
 
         # Generate options (all 8 directions)
         options = list(self.DIRECTIONS.keys())
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         correct_idx = options.index(dir_name) + 1
 
         # Format question - separate question and options
@@ -466,7 +474,9 @@ Grid (uppercase letters):
     def _generate_find_word_location_question(self) -> None:
         """Generate question about finding a word's location and direction (Hard, MCQ)."""
         # Select a word
-        word = random.choice([w for w in self._words if 3 <= len(w) <= self._grid_size])
+        word = self.py_random.choice(
+            [w for w in self._words if 3 <= len(w) <= self._grid_size]
+        )
 
         # Find valid placements
         valid_placements = []
@@ -482,7 +492,9 @@ Grid (uppercase letters):
             return
 
         # Choose random placement
-        start_row, start_col, dir_name, direction = random.choice(valid_placements)
+        start_row, start_col, dir_name, direction = self.py_random.choice(
+            valid_placements
+        )
         self._insert_word(word, start_row, start_col, direction)
 
         # Generate correct option
@@ -503,21 +515,21 @@ Grid (uppercase letters):
 
         # Select 7 random incorrect options
         if len(all_positions) >= 7:
-            incorrect_options = random.sample(all_positions, 7)
+            incorrect_options = self.py_random.sample(all_positions, 7)
         else:
             incorrect_options = all_positions[:]
             # Add completely random options if needed
             while len(incorrect_options) < 7:
-                rand_row = random.randint(1, self._grid_size)
-                rand_col = random.randint(1, self._grid_size)
-                rand_dir = random.choice(list(self.DIRECTIONS.keys()))
+                rand_row = self.py_random.randint(1, self._grid_size)
+                rand_col = self.py_random.randint(1, self._grid_size)
+                rand_dir = self.py_random.choice(list(self.DIRECTIONS.keys()))
                 option = f"Row {rand_row}, Column {rand_col}, Direction: {rand_dir}"
                 if option not in incorrect_options and option != correct_option:
                     incorrect_options.append(option)
 
         # Combine and shuffle
         options = [correct_option] + incorrect_options
-        random.shuffle(options)
+        self.py_random.shuffle(options)
         correct_idx = options.index(correct_option) + 1
 
         # Format question - separate question and options

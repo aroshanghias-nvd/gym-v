@@ -302,7 +302,9 @@ class TraceSolver:
 # ============================================================================
 
 
-def generate_random_puzzle(piece_types: list[str], num_pieces: int) -> str:
+def generate_random_puzzle(
+    piece_types: list[str], num_pieces: int, *, rng: random.Random
+) -> str:
     """Generate a random solvable Chess Ranger puzzle.
 
     Args:
@@ -343,10 +345,10 @@ def generate_random_puzzle(piece_types: list[str], num_pieces: int) -> str:
         return "".join(result)
 
     # Randomly select positions
-    positions = random.sample(range(64), num_pieces)
+    positions = rng.sample(range(64), num_pieces)
 
     # Assign pieces to positions
-    chesses = [random.choice(piece_types) for _ in range(num_pieces)]
+    chesses = [rng.choice(piece_types) for _ in range(num_pieces)]
 
     # Create array
     arr = []
@@ -368,7 +370,7 @@ def generate_random_puzzle(piece_types: list[str], num_pieces: int) -> str:
     if solver_puzzle.solve() is not None:
         return arr
     else:
-        return generate_random_puzzle(piece_types, num_pieces)
+        return generate_random_puzzle(piece_types, num_pieces, rng=rng)
 
 
 # ============================================================================
@@ -748,7 +750,9 @@ class ChessRangerQAEnv(Env):
 
         # Generate puzzle
         piece_types = ["P", "R", "B", "N", "Q", "K"]
-        self._fen = generate_random_puzzle(piece_types, self.num_pieces)
+        self._fen = generate_random_puzzle(
+            piece_types, self.num_pieces, rng=self.py_random
+        )
         self._board = Board(self._fen)
 
         # Select question type
@@ -871,7 +875,9 @@ class ChessRangerQAEnv(Env):
         if moves is None:
             # Regenerate puzzle if not solvable (should not happen)
             piece_types = ["P", "R", "B", "N", "Q", "K"]
-            self._fen = generate_random_puzzle(piece_types, self.num_pieces)
+            self._fen = generate_random_puzzle(
+                piece_types, self.num_pieces, rng=self.py_random
+            )
             self._board = Board(self._fen)
             return self._generate_steps_to_solve_question()
 
@@ -887,7 +893,7 @@ class ChessRangerQAEnv(Env):
         piece_count, _ = count_pieces_in_fen(self._fen)
 
         # Randomly select a piece type
-        random_piece_type = random.choice(piece_types)
+        random_piece_type = self.py_random.choice(piece_types)
         count = piece_count[random_piece_type]
         piece_full_name = PIECE_NAME_MAPPING[random_piece_type]
 
@@ -906,12 +912,14 @@ class ChessRangerQAEnv(Env):
         if not single_pieces:
             # If no single pieces, regenerate puzzle
             piece_types_gen = ["P", "R", "B", "N", "Q", "K"]
-            self._fen = generate_random_puzzle(piece_types_gen, self.num_pieces)
+            self._fen = generate_random_puzzle(
+                piece_types_gen, self.num_pieces, rng=self.py_random
+            )
             self._board = Board(self._fen)
             return self._generate_find_piece_question()
 
         # Select a piece with exactly 1 instance
-        random_piece_type = random.choice(single_pieces)
+        random_piece_type = self.py_random.choice(single_pieces)
         positions = piece_positions[random_piece_type]
         piece_full_name = PIECE_NAME_MAPPING[random_piece_type]
 
@@ -927,8 +935,8 @@ class ChessRangerQAEnv(Env):
 
         # Randomly select a square
         while True:
-            random_row = random.randint(0, 7)
-            random_col = random.randint(0, 7)
+            random_row = self.py_random.randint(0, 7)
+            random_col = self.py_random.randint(0, 7)
 
             # Check if there's a piece at this position
             piece_at_position = "No Piece"
@@ -938,7 +946,7 @@ class ChessRangerQAEnv(Env):
                     break
 
             # Bias towards occupied squares (but allow empty sometimes)
-            if piece_at_position != "No Piece" or random.random() < 0.3:
+            if piece_at_position != "No Piece" or self.py_random.random() < 0.3:
                 break
 
         position_str = convert_to_chess_notation(random_row, random_col)
@@ -970,7 +978,9 @@ class ChessRangerQAEnv(Env):
         # Need at least 4 moves
         if len(all_moves) < 4:
             piece_types = ["P", "R", "B", "N", "Q", "K"]
-            self._fen = generate_random_puzzle(piece_types, self.num_pieces)
+            self._fen = generate_random_puzzle(
+                piece_types, self.num_pieces, rng=self.py_random
+            )
             self._board = Board(self._fen)
             return self._generate_predict_solvable_question()
 
@@ -991,7 +1001,7 @@ class ChessRangerQAEnv(Env):
             )
 
         # Randomly select 4 moves
-        random.shuffle(all_steps)
+        self.py_random.shuffle(all_steps)
         selected_steps = all_steps[:4]
 
         # Generate options and find correct answers
@@ -1004,7 +1014,9 @@ class ChessRangerQAEnv(Env):
         if not answer_indices:
             # If no solvable moves, regenerate
             piece_types = ["P", "R", "B", "N", "Q", "K"]
-            self._fen = generate_random_puzzle(piece_types, self.num_pieces)
+            self._fen = generate_random_puzzle(
+                piece_types, self.num_pieces, rng=self.py_random
+            )
             self._board = Board(self._fen)
             return self._generate_predict_solvable_question()
 

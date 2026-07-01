@@ -6,7 +6,6 @@ Single-turn Q&A environment where the model answers questions about a Space Inva
 from __future__ import annotations
 
 from importlib import resources
-import random
 import re
 from textwrap import dedent
 from typing import Any
@@ -243,16 +242,13 @@ Ship Row: {ship_str}"""
     ) -> tuple[dict[str, Observation], dict[str, Any]]:
         super().reset(seed=seed)
 
-        if seed is not None:
-            random.seed(seed)
-
         self._score = 0
 
         # Generate enemies
         self._generate_enemies()
 
         # Random ship position
-        enemy_cols = list(set(e.col for e in self._enemies))
+        enemy_cols = sorted(set(e.col for e in self._enemies))
         if enemy_cols:
             self._ship_col = enemy_cols[self.np_random.integers(0, len(enemy_cols))]
         else:

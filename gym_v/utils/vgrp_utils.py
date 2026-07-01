@@ -4,9 +4,15 @@ from typing import Any
 
 
 def solve_puzzle_backtrack(
-    factory, game_state: dict[str, Any], max_attempts: int = 1000
+    factory,
+    game_state: dict[str, Any],
+    max_attempts: int = 1000,
+    *,
+    rng: Any | None = None,
 ) -> bool:
     """Simple backtracking solver."""
+    if rng is None:
+        rng = random
     board = game_state["board"]
     size = len(board)
 
@@ -23,11 +29,13 @@ def solve_puzzle_backtrack(
             if board[row][col] == 0:
                 # Try each possible value
                 possible_values = factory.get_possible_values(game_state, row, col)
-                random.shuffle(possible_values)
+                rng.shuffle(possible_values)
 
                 for value in possible_values:
                     board[row][col] = value
-                    if solve_puzzle_backtrack(factory, game_state, max_attempts):
+                    if solve_puzzle_backtrack(
+                        factory, game_state, max_attempts, rng=rng
+                    ):
                         return True
                     board[row][col] = 0
                 return False
@@ -41,6 +49,7 @@ def generate_puzzle(
     num_hints: int,
     max_attempts: int = 100,
     initial_board: list[list[Any]] | None = None,
+    rng: Any | None = None,
     **extra_state,
 ) -> tuple[list[list[Any]], list[list[Any]]] | None:
     """Generate a puzzle with solution using the factory.
@@ -51,6 +60,7 @@ def generate_puzzle(
         num_hints: Number of hints to reveal in the puzzle (if applicable).
         max_attempts: Max attempts to generate a valid solution.
         initial_board: Optional initial board state (e.g. containing trees).
+        rng: Optional random generator used to shuffle solver candidates.
         **extra_state: Additional state for the constraints (e.g. regions, clues).
     """
     for _attempt in range(max_attempts):
@@ -66,13 +76,13 @@ def generate_puzzle(
         factory._solve_attempts = 0
 
         # Try to fill the board
-        if solve_puzzle_backtrack(factory, game_state):
+        if solve_puzzle_backtrack(factory, game_state, rng=rng):
             # Save solution (deep copy to avoid reference issues)
             solution = copy.deepcopy(board)
 
             # Create puzzle by sampling hints
             if num_hints > 0:
-                puzzle = factory.sample_hints(solution, num_hints)
+                puzzle = factory.sample_hints(solution, num_hints, rng=rng)
             else:
                 puzzle = [[0 for _ in range(size)] for _ in range(size)]
 
